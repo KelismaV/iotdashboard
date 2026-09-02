@@ -2,7 +2,7 @@
  * Frontend API client communicating via Vite Proxy (/api) to Express Backend & SQLite DB
  */
 
-const API_BASE = '/api';
+const API_BASE = 'https://dashboard-t4ph.onrender.com/api';
 
 export async function fetchServerStatus() {
   const res = await fetch(`${API_BASE}/status`);
