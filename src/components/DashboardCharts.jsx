@@ -73,12 +73,12 @@ export default function DashboardCharts({ data, thresholds }) {
           </span>
           <span className="text-xs font-bold text-slate-200">
             {viewMode === 'realtime'
-              ? 'Đồ Thị Thời Gian Thực (Tịnh tiến trượt từ Phải sang Trái)'
+              ? 'Đồ Thị Thời Gian Thực'
               : 'Đồ Thị Tổng Quan Lịch Sử'}
           </span>
           {viewMode === 'realtime' && (
             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-              Live Stream Window: {chartData.length} điểm
+              Live Stream: {chartData.length} điểm
             </span>
           )}
         </div>
@@ -95,7 +95,7 @@ export default function DashboardCharts({ data, thresholds }) {
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
-              <span>Real-time (Trượt)</span>
+              <span>Real-time</span>
             </button>
             <button
               onClick={() => setViewMode('all')}
@@ -116,12 +116,12 @@ export default function DashboardCharts({ data, thresholds }) {
               value={windowSize}
               onChange={(e) => setWindowSize(Number(e.target.value))}
               className="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-cyan-500/50"
-              title="Số điểm đo gần nhất hiển thị trên cửa sổ trượt"
+              title="Số điểm đo gần nhất hiển thị"
             >
-              <option value={20}>Trượt 20 điểm</option>
-              <option value={35}>Trượt 35 điểm</option>
-              <option value={50}>Trượt 50 điểm</option>
-              <option value={80}>Trượt 80 điểm</option>
+              <option value={20}>20 điểm</option>
+              <option value={35}>35 điểm</option>
+              <option value={50}>50 điểm</option>
+              <option value={80}>80 điểm</option>
             </select>
           )}
         </div>
@@ -139,9 +139,7 @@ export default function DashboardCharts({ data, thresholds }) {
                 Diễn Biến Nhiệt Độ (°C) & Độ Ẩm (%)
               </h3>
               <p className="text-xs text-slate-400">
-                {viewMode === 'realtime' 
-                  ? 'Cập nhật trực tiếp: Điểm mới xuất hiện bên phải, tịnh tiến dần sang trái' 
-                  : 'Theo dõi trực tiếp theo mốc thời gian'}
+                Theo dõi trực tiếp theo mốc thời gian
               </p>
             </div>
           </div>
