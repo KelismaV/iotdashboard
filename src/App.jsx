@@ -14,7 +14,9 @@ import {
   fetchChartData, 
   fetchForecasts,
   updateServerSettings,
-  subscribeToSensorStream
+  subscribeToSensorStream,
+  toggleSimulator,
+  clearDatabase
 } from './services/api';
 
 import { DEFAULT_SHEET_URL } from './services/sheetService';
@@ -32,6 +34,8 @@ export default function App() {
   const [chartPoints, setChartPoints] = useState([]);
   const [forecastData, setForecastData] = useState(null);
   const [statusInfo, setStatusInfo] = useState({ isConnected: true, recordCount: 0, lastSyncTime: null });
+  const [filteredCount, setFilteredCount] = useState(0);
+  const [simulatorEnabled, setSimulatorEnabled] = useState(true);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -53,8 +57,14 @@ export default function App() {
       ]);
 
       setStatusInfo(statusRes);
+      if (statusRes.simulatorEnabled !== undefined) {
+        setSimulatorEnabled(statusRes.simulatorEnabled);
+      }
       if (kpiRes.success) {
         setKpiData(kpiRes.metrics);
+        if (kpiRes.filteredCount !== undefined) {
+          setFilteredCount(kpiRes.filteredCount);
+        }
         if (kpiRes.thresholds) setThresholds(kpiRes.thresholds);
       }
       if (chartRes.success) {
@@ -74,6 +84,45 @@ export default function App() {
     loadDashboardData(false);
   }, [loadDashboardData]);
 
+  // Real-Time SSE Stream Listener (Instantly pushes new readings into chart & KPI state)
+  useEffect(() => {
+    const unsubscribe = subscribeToSensorStream((eventData) => {
+      if (eventData.type === 'NEW_READING' && eventData.record) {
+        const newRec = eventData.record;
+
+        setChartPoints((prev) => {
+          if (!prev || prev.length === 0) return [newRec];
+          const updated = [...prev, newRec];
+          return updated.length > 120 ? updated.slice(updated.length - 120) : updated;
+        });
+
+        setFilteredCount((prev) => (prev > 0 ? prev + 1 : prev));
+
+        setStatusInfo((prev) => ({
+          ...prev,
+          recordCount: (prev.recordCount || 0) + 1,
+          lastSyncTime: newRec.timestamp,
+          syncStatus: `⚡ Real-time SSE Live (${newRec.temp}°C | MQ4: ${newRec.mq4} PPM)`,
+        }));
+
+        // Dynamically update KPI current values
+        setKpiData((prevKpi) => {
+          if (!prevKpi) return null;
+          return {
+            ...prevKpi,
+            temp: { ...prevKpi.temp, current: newRec.temp },
+            humidity: { ...prevKpi.humidity, current: newRec.humidity },
+            mq2: { ...prevKpi.mq2, current: newRec.mq2 },
+            mq3: { ...prevKpi.mq3, current: newRec.mq3 },
+            mq4: { ...prevKpi.mq4, current: newRec.mq4 },
+          };
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Real-time Polling Interval
   useEffect(() => {
     if (refreshInterval <= 0) return;
@@ -83,6 +132,18 @@ export default function App() {
 
     return () => clearInterval(timer);
   }, [refreshInterval, loadDashboardData]);
+
+  // Handle Toggle Simulator
+  const handleToggleSimulator = async () => {
+    try {
+      const res = await toggleSimulator(!simulatorEnabled);
+      if (res.success) {
+        setSimulatorEnabled(res.enabled);
+      }
+    } catch (err) {
+      console.error('Lỗi toggle simulator:', err);
+    }
+  };
 
   // Load Forecasts when Analytics Tab is active
   useEffect(() => {
@@ -94,6 +155,19 @@ export default function App() {
         .catch(console.error);
     }
   }, [activeTab]);
+
+  // Handle Clear Database
+  const handleClearDatabase = async () => {
+    try {
+      await clearDatabase();
+      setChartPoints([]);
+      setKpiData(null);
+      setSimulatorEnabled(false);
+      await loadDashboardData(false);
+    } catch (err) {
+      console.error('Lỗi xóa database:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-12 selection:bg-cyan-500 selection:text-white">
@@ -109,6 +183,8 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         refreshInterval={refreshInterval}
         setRefreshInterval={setRefreshInterval}
+        simulatorEnabled={simulatorEnabled}
+        onToggleSimulator={handleToggleSimulator}
       />
 
       {/* Main Content Container */}
@@ -185,7 +261,7 @@ export default function App() {
               timeframe={timeframe}
               setTimeframe={setTimeframe}
               totalCount={statusInfo.recordCount}
-              filteredCount={chartPoints.length}
+              filteredCount={filteredCount || chartPoints.length}
             />
 
             {/* Tab Views */}
@@ -223,6 +299,7 @@ export default function App() {
         onReloadData={(newUrl) => {
           updateServerSettings(newUrl, thresholds).then(() => loadDashboardData(false));
         }}
+        onClearDatabase={handleClearDatabase}
       />
 
     </div>

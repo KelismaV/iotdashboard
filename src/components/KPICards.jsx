@@ -41,7 +41,7 @@ export default function KPICards({ kpiData, thresholds }) {
     },
     {
       id: 'mq2',
-      title: 'Khí Gas MQ2 (Khói/LPG)',
+      title: 'Khí Gas MQ2 (Khói)',
       unit: 'PPM',
       data: kpiData.mq2,
       icon: Flame,
@@ -53,7 +53,7 @@ export default function KPICards({ kpiData, thresholds }) {
     },
     {
       id: 'mq3',
-      title: 'Khí Gas MQ3 (Cồn/Ethanol)',
+      title: 'Khí Gas MQ3 (Cồn)',
       unit: 'PPM',
       data: kpiData.mq3,
       icon: Wine,
@@ -75,9 +75,37 @@ export default function KPICards({ kpiData, thresholds }) {
       textAccent: 'text-emerald-400',
       bgGlow: 'shadow-emerald-500/10 border-emerald-500/20',
     },
+    {
+      id: 'gas_index',
+      title: 'Gas Index (Chỉ Số Gộp)',
+      unit: 'Idx',
+      data: kpiData.gas_index || { current: 0, avg: 0, min: 0, max: 0, trend: 0 },
+      icon: Flame,
+      warningLimit: 0.5,
+      criticalLimit: 1.0,
+      color: 'from-blue-600 to-violet-600',
+      textAccent: 'text-violet-400',
+      bgGlow: 'shadow-violet-500/10 border-violet-500/20',
+      badgeOverride: kpiData.current_level || 'L0',
+    },
   ];
 
   const getStatusBadge = (card) => {
+    if (card.badgeOverride) {
+      const lvl = card.badgeOverride;
+      const isDangerous = lvl === 'L2' || lvl === 'L3';
+      const isWarning = lvl === 'L1';
+      return (
+        <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
+          isDangerous ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse' :
+          isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+          'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
+        }`}>
+          <span>Cấp độ {lvl}</span>
+        </span>
+      );
+    }
+
     const val = card.data.current;
     if (val >= card.criticalLimit) {
       return (
@@ -104,7 +132,7 @@ export default function KPICards({ kpiData, thresholds }) {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 mb-6">
       {cards.map((card) => {
         const Icon = card.icon;
         const trend = card.data.trend;

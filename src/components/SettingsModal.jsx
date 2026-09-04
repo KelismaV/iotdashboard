@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, RefreshCw, Link, Sliders, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Save, Link, Sliders, CheckCircle, Trash2 } from 'lucide-react';
 import { DEFAULT_SHEET_URL } from '../services/sheetService';
 
 export default function SettingsModal({
@@ -9,7 +9,8 @@ export default function SettingsModal({
   setSheetUrl,
   thresholds,
   setThresholds,
-  onReloadData
+  onReloadData,
+  onClearDatabase
 }) {
   const [urlInput, setUrlInput] = useState(sheetUrl);
   const [tempThresh, setTempThresh] = useState(thresholds.tempHigh);
@@ -176,13 +177,29 @@ export default function SettingsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between pt-5 border-t border-slate-800 mt-6">
-          <button
-            onClick={handleResetDefault}
-            className="text-xs text-slate-400 hover:text-slate-200 underline"
-          >
-            Khôi phục mặc định
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-slate-800 mt-6">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleResetDefault}
+              className="text-xs text-slate-400 hover:text-slate-200 underline"
+            >
+              Khôi phục mặc định
+            </button>
+            {onClearDatabase && (
+              <button
+                onClick={async () => {
+                  if (window.confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu mẫu cũ để bắt đầu dữ liệu thực từ Sheet mới?')) {
+                    await onClearDatabase();
+                    setStatusMsg({ type: 'success', text: 'Đã xóa toàn bộ dữ liệu mẫu! Sẵn sàng đón dữ liệu thực.' });
+                  }
+                }}
+                className="flex items-center space-x-1 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg border border-rose-500/30 transition"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xóa dữ liệu cũ</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center space-x-2">
             <button

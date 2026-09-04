@@ -2,12 +2,13 @@ import React from 'react';
 import { 
   ShieldCheck, 
   AlertTriangle, 
-  Info, 
   CheckCircle2, 
-  Lightbulb,
-  Thermometer,
+  Thermometer, 
   Droplets,
-  Wind
+  Wind,
+  Flame,
+  Wine,
+  Lightbulb
 } from 'lucide-react';
 import { evaluateSafety } from '../services/analyticsService';
 
@@ -108,46 +109,74 @@ export default function SafetyEvaluation({ latestRecord, thresholds }) {
               <span className="text-xs text-slate-400">Cập nhật: {latestRecord?.formattedTime || 'N/A'}</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
               {/* Temp Assessment */}
-              <div className="glass-card p-3 rounded-xl">
-                <div className="flex items-center space-x-2 mb-1 text-slate-400 text-xs">
-                  <Thermometer className="w-4 h-4 text-amber-400" />
+              <div className="glass-card p-2.5 rounded-xl text-center">
+                <div className="flex items-center justify-center space-x-1 mb-1 text-slate-400 text-[11px]">
+                  <Thermometer className="w-3.5 h-3.5 text-amber-400" />
                   <span>Nhiệt độ</span>
                 </div>
-                <div className="text-lg font-bold text-white">
+                <div className="text-base font-bold text-white">
                   {latestRecord?.temp || 0}°C
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[10px] text-slate-400 mt-0.5">
                   {latestRecord?.temp > thresholds.tempWarning ? '⚠️ Hơi cao' : '✅ Đạt chuẩn'}
                 </p>
               </div>
 
               {/* Humidity Assessment */}
-              <div className="glass-card p-3 rounded-xl">
-                <div className="flex items-center space-x-2 mb-1 text-slate-400 text-xs">
-                  <Droplets className="w-4 h-4 text-cyan-400" />
+              <div className="glass-card p-2.5 rounded-xl text-center">
+                <div className="flex items-center justify-center space-x-1 mb-1 text-slate-400 text-[11px]">
+                  <Droplets className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Độ ẩm</span>
                 </div>
-                <div className="text-lg font-bold text-white">
+                <div className="text-base font-bold text-white">
                   {latestRecord?.humidity || 0}%
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[10px] text-slate-400 mt-0.5">
                   {latestRecord?.humidity > thresholds.humidityHigh ? '⚠️ Ẩm cao' : '✅ Vừa phải'}
                 </p>
               </div>
 
-              {/* Gas Assessment */}
-              <div className="glass-card p-3 rounded-xl">
-                <div className="flex items-center space-x-2 mb-1 text-slate-400 text-xs">
-                  <Wind className="w-4 h-4 text-rose-400" />
-                  <span>Khí Gas MQ</span>
+              {/* MQ2 Assessment */}
+              <div className="glass-card p-2.5 rounded-xl text-center">
+                <div className="flex items-center justify-center space-x-1 mb-1 text-slate-400 text-[11px]">
+                  <Flame className="w-3.5 h-3.5 text-rose-400" />
+                  <span>MQ2 Khói</span>
                 </div>
-                <div className="text-lg font-bold text-white">
-                  {latestRecord?.mq2 || 0} PPM
+                <div className="text-base font-bold text-white">
+                  {latestRecord?.mq2 || 0}
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {latestRecord?.mq2 > thresholds.mq2Warning ? '🚨 Vượt ngưỡng' : '✅ Bình thường'}
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {latestRecord?.mq2 > thresholds.mq2Warning ? '🚨 Vượt ngưỡng' : '✅ An toàn'}
+                </p>
+              </div>
+
+              {/* MQ3 Assessment */}
+              <div className="glass-card p-2.5 rounded-xl text-center">
+                <div className="flex items-center justify-center space-x-1 mb-1 text-slate-400 text-[11px]">
+                  <Wine className="w-3.5 h-3.5 text-purple-400" />
+                  <span>MQ3 Cồn</span>
+                </div>
+                <div className="text-base font-bold text-white">
+                  {latestRecord?.mq3 || 0}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {latestRecord?.mq3 > thresholds.mq3Warning ? '🚨 Vượt ngưỡng' : '✅ An toàn'}
+                </p>
+              </div>
+
+              {/* MQ4 Assessment */}
+              <div className="glass-card p-2.5 rounded-xl text-center">
+                <div className="flex items-center justify-center space-x-1 mb-1 text-slate-400 text-[11px]">
+                  <Wind className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>MQ4 Methane</span>
+                </div>
+                <div className="text-base font-bold text-white">
+                  {latestRecord?.mq4 || 0}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {latestRecord?.mq4 > thresholds.mq4Warning ? '🚨 Vượt ngưỡng' : '✅ An toàn'}
                 </p>
               </div>
             </div>

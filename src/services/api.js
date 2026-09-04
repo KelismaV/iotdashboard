@@ -2,7 +2,7 @@
  * Frontend API client communicating via Vite Proxy (/api) to Express Backend & SQLite DB
  */
 
-const API_BASE = 'https://dashboard-t4ph.onrender.com/api';
+const API_BASE = '/api';
 
 export async function fetchServerStatus() {
   const res = await fetch(`${API_BASE}/status`);
@@ -42,6 +42,24 @@ export async function updateServerSettings(sheetUrl, thresholds) {
     body: JSON.stringify({ sheetUrl, thresholds }),
   });
   if (!res.ok) throw new Error('Lỗi lưu cài đặt');
+  return await res.json();
+}
+
+export async function toggleSimulator(enabled) {
+  const res = await fetch(`${API_BASE}/simulator/toggle`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error('Lỗi bật/tắt bộ giả lập real-time');
+  return await res.json();
+}
+
+export async function clearDatabase() {
+  const res = await fetch(`${API_BASE}/db/clear`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Lỗi làm sạch cơ sở dữ liệu');
   return await res.json();
 }
 

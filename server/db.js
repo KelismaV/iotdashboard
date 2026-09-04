@@ -24,12 +24,33 @@ db.exec(`
     mq2 REAL NOT NULL,
     mq3 REAL NOT NULL,
     mq4 REAL NOT NULL,
+    gas_index REAL DEFAULT 0,
+    gas_index_pct REAL DEFAULT 0,
+    current_level TEXT DEFAULT 'L0',
+    predicted_level TEXT DEFAULT 'L0',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE INDEX IF NOT EXISTS idx_timestamp ON sensor_logs(timestamp);
   CREATE INDEX IF NOT EXISTS idx_status ON sensor_logs(status);
 `);
+
+// Auto-migrate existing database table if columns are missing
+try { db.exec(`ALTER TABLE sensor_logs ADD COLUMN gas_index REAL DEFAULT 0;`); } catch (e) {}
+try { db.exec(`ALTER TABLE sensor_logs ADD COLUMN gas_index_pct REAL DEFAULT 0;`); } catch (e) {}
+try { db.exec(`ALTER TABLE sensor_logs ADD COLUMN predicted_gas_index REAL DEFAULT 0;`); } catch (e) {}
+try { db.exec(`ALTER TABLE sensor_logs ADD COLUMN current_level TEXT DEFAULT 'L0';`); } catch (e) {}
+try { db.exec(`ALTER TABLE sensor_logs ADD COLUMN predicted_level TEXT DEFAULT 'L0';`); } catch (e) {}
+
+/**
+ * Clears/Wipes all records from sensor_logs table (Reset database for real data)
+ */
+export function clearLogs() {
+  db.prepare('DELETE FROM sensor_logs').run();
+  try { db.prepare('VACUUM').run(); } catch (e) {}
+  console.log('🧹 [SQLite Database Reset]: Đã xóa toàn bộ bản ghi mẫu cũ!');
+  return { success: true, count: 0 };
+}
 
 /**
  * Inserts a single sensor reading into SQLite (< 1ms)
@@ -44,9 +65,15 @@ export function insertLog(data) {
   const rawHum = parseFloat(data.humidity) || 0;
   const clampedHum = Math.min(100, Math.max(0, Math.round(rawHum * 10) / 10));
 
+  const gasIndex = parseFloat(data.gas_index) || 0;
+  const gasIndexPct = parseFloat(data.gas_index_pct) || 0;
+  const predictedGasIndex = parseFloat(data.predicted_gas_index) || 0;
+  const currentLevel = String(data.current_level || 'L0').trim();
+  const predictedLevel = String(data.predicted_level || 'L0').trim();
+
   const stmt = db.prepare(`
-    INSERT INTO sensor_logs (timestamp, date_str, time_str, status, temp, humidity, mq2, mq3, mq4)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO sensor_logs (timestamp, date_str, time_str, status, temp, humidity, mq2, mq3, mq4, gas_index, gas_index_pct, predicted_gas_index, current_level, predicted_level)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -58,7 +85,12 @@ export function insertLog(data) {
     clampedHum,
     Math.round(parseFloat(data.mq2) || 0),
     Math.round(parseFloat(data.mq3) || 0),
-    Math.round(parseFloat(data.mq4) || 0)
+    Math.round(parseFloat(data.mq4) || 0),
+    Math.round(gasIndex * 10000) / 10000,
+    Math.round(gasIndexPct * 100) / 100,
+    Math.round(predictedGasIndex * 10000) / 10000,
+    currentLevel,
+    predictedLevel
   );
 
   return {
@@ -75,6 +107,11 @@ export function insertLog(data) {
     mq2: Math.round(parseFloat(data.mq2) || 0),
     mq3: Math.round(parseFloat(data.mq3) || 0),
     mq4: Math.round(parseFloat(data.mq4) || 0),
+    gas_index: Math.round(gasIndex * 10000) / 10000,
+    gas_index_pct: Math.round(gasIndexPct * 100) / 100,
+    predicted_gas_index: Math.round(predictedGasIndex * 10000) / 10000,
+    current_level: currentLevel,
+    predicted_level: predictedLevel,
   };
 }
 
@@ -85,8 +122,8 @@ export function insertBatchLogs(records) {
   if (!records || records.length === 0) return 0;
 
   const insertStmt = db.prepare(`
-    INSERT INTO sensor_logs (timestamp, date_str, time_str, status, temp, humidity, mq2, mq3, mq4)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO sensor_logs (timestamp, date_str, time_str, status, temp, humidity, mq2, mq3, mq4, gas_index, gas_index_pct, predicted_gas_index, current_level, predicted_level)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertMany = db.transaction((rows) => {
@@ -98,11 +135,16 @@ export function insertBatchLogs(records) {
         r.rawDate || r.formattedDate,
         r.rawTime || r.formattedTime,
         r.status || 'Success',
-        r.temp,
+        r.temp || 0,
         clampedHum,
-        r.mq2,
-        r.mq3,
-        r.mq4
+        r.mq2 || 0,
+        r.mq3 || 0,
+        r.mq4 || 0,
+        r.gas_index || 0,
+        r.gas_index_pct || 0,
+        r.predicted_gas_index || 0,
+        r.current_level || 'L0',
+        r.predicted_level || 'L0'
       );
       count++;
     }
@@ -155,6 +197,8 @@ export function getKPIMetrics(timeframe = 'day', thresholds) {
       AVG(mq2) as avg_mq2, MIN(mq2) as min_mq2, MAX(mq2) as max_mq2,
       AVG(mq3) as avg_mq3, MIN(mq3) as min_mq3, MAX(mq3) as max_mq3,
       AVG(mq4) as avg_mq4, MIN(mq4) as min_mq4, MAX(mq4) as max_mq4,
+      AVG(gas_index) as avg_gas_index, MIN(gas_index) as min_gas_index, MAX(gas_index) as max_gas_index,
+      AVG(gas_index_pct) as avg_gas_pct, MIN(gas_index_pct) as min_gas_pct, MAX(gas_index_pct) as max_gas_pct,
       COUNT(*) as filtered_count
     FROM sensor_logs
     WHERE timestamp >= ?
@@ -169,6 +213,8 @@ export function getKPIMetrics(timeframe = 'day', thresholds) {
         AVG(mq2) as avg_mq2, MIN(mq2) as min_mq2, MAX(mq2) as max_mq2,
         AVG(mq3) as avg_mq3, MIN(mq3) as min_mq3, MAX(mq3) as max_mq3,
         AVG(mq4) as avg_mq4, MIN(mq4) as min_mq4, MAX(mq4) as max_mq4,
+        AVG(gas_index) as avg_gas_index, MIN(gas_index) as min_gas_index, MAX(gas_index) as max_gas_index,
+        AVG(gas_index_pct) as avg_gas_pct, MIN(gas_index_pct) as min_gas_pct, MAX(gas_index_pct) as max_gas_pct,
         COUNT(*) as filtered_count
       FROM (SELECT * FROM sensor_logs ORDER BY timestamp DESC LIMIT 1000)
     `).get();
@@ -197,6 +243,10 @@ export function getKPIMetrics(timeframe = 'day', thresholds) {
       mq2: calc(latest.mq2, prev.mq2, stats.avg_mq2 || 0, stats.min_mq2 || 0, stats.max_mq2 || 0),
       mq3: calc(latest.mq3, prev.mq3, stats.avg_mq3 || 0, stats.min_mq3 || 0, stats.max_mq3 || 0),
       mq4: calc(latest.mq4, prev.mq4, stats.avg_mq4 || 0, stats.min_mq4 || 0, stats.max_mq4 || 0),
+      gas_index: calc(latest.gas_index || 0, prev.gas_index || 0, stats.avg_gas_index || 0, stats.min_gas_index || 0, stats.max_gas_index || 0),
+      gas_index_pct: calc(latest.gas_index_pct || 0, prev.gas_index_pct || 0, stats.avg_gas_pct || 0, stats.min_gas_pct || 0, stats.max_gas_pct || 0),
+      current_level: latest.current_level || 'L0',
+      predicted_level: latest.predicted_level || 'L0',
     },
     totalCount: getCount(),
     filteredCount: stats.filtered_count || 0,
@@ -259,20 +309,23 @@ export function getChartPoints(timeframe = 'day', maxPoints = 120) {
     const dt = new Date(r.timestamp);
     const dayStr = String(dt.getDate()).padStart(2, '0');
     const monthStr = String(dt.getMonth() + 1).padStart(2, '0');
+    const yearStr = String(dt.getFullYear());
     const hoursStr = String(dt.getHours()).padStart(2, '0');
     const minStr = String(dt.getMinutes()).padStart(2, '0');
 
-    let displayLabel = r.time_str;
-    if (timeframe === 'hour') displayLabel = `${hoursStr}:${minStr}`;
-    else if (timeframe === 'day') displayLabel = `${dayStr}/${monthStr} ${hoursStr}:${minStr}`;
-    else if (timeframe === 'week' || timeframe === 'month') displayLabel = `${dayStr}/${monthStr}`;
-    else if (timeframe === 'year' || timeframe === 'all') displayLabel = `${monthStr}/${dt.getFullYear()}`;
+    // Always include Date (DD/MM) AND Time (HH:mm) so chart ticks and tooltips fulfill teacher feedback
+    let displayLabel = `${dayStr}/${monthStr} ${hoursStr}:${minStr}`;
+    if (timeframe === 'year' || timeframe === 'all') {
+      displayLabel = `${dayStr}/${monthStr}/${yearStr.slice(2)} ${hoursStr}:${minStr}`;
+    }
+
+    const fullDateTime = `${dayStr}/${monthStr}/${yearStr} ${hoursStr}:${minStr}`;
 
     return {
       ...r,
-      formattedDate: r.date_str,
-      formattedTime: r.time_str,
-      formattedDateTime: `${r.date_str} ${r.time_str}`,
+      formattedDate: r.date_str || `${dayStr}/${monthStr}/${yearStr}`,
+      formattedTime: r.time_str || `${hoursStr}:${minStr}`,
+      formattedDateTime: fullDateTime,
       displayLabel,
     };
   });

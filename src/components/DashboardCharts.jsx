@@ -7,20 +7,20 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   CartesianGrid,
-  ReferenceLine,
-  BarChart,
-  Bar
+  ReferenceLine
 } from 'recharts';
 import { Thermometer, Flame, BarChart3 } from 'lucide-react';
 import { aggregateForChart } from '../services/analyticsService';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
+    const fullTime = payload[0]?.payload?.formattedDateTime || label;
     return (
       <div className="glass-panel p-3 rounded-xl border border-slate-700 shadow-xl text-xs space-y-1">
-        <p className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1">{label}</p>
+        <p className="font-bold text-cyan-300 border-b border-slate-800 pb-1 mb-1 flex items-center justify-between gap-2">
+          <span>🕒 {fullTime}</span>
+        </p>
         {payload.map((entry, index) => (
           <div key={`item-${index}`} className="flex items-center justify-between space-x-4">
             <span style={{ color: entry.color }} className="font-medium">
@@ -86,7 +86,7 @@ export default function DashboardCharts({ data, thresholds }) {
               </defs>
 
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="displayLabel" stroke="#64748b" fontSize={11} tickLine={false} />
+              <XAxis dataKey="displayLabel" stroke="#64748b" fontSize={10} tickLine={false} minTickGap={25} />
               <YAxis yAxisId="left" stroke="#f59e0b" fontSize={11} domain={['dataMin - 2', 'dataMax + 2']} />
               <YAxis yAxisId="right" orientation="right" stroke="#06b6d4" fontSize={11} domain={[0, 100]} />
               <Tooltip content={<CustomTooltip />} />
@@ -127,7 +127,7 @@ export default function DashboardCharts({ data, thresholds }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="displayLabel" stroke="#64748b" fontSize={11} tickLine={false} />
+                <XAxis dataKey="displayLabel" stroke="#64748b" fontSize={10} tickLine={false} minTickGap={25} />
                 <YAxis stroke="#94a3b8" fontSize={11} />
                 <Tooltip content={<CustomTooltip />} />
 
@@ -139,7 +139,7 @@ export default function DashboardCharts({ data, thresholds }) {
           </div>
         </div>
 
-        {/* Chart 3: Average Gas Comparison Bar Chart */}
+        {/* Chart 3: Combined Gas Index Area Chart */}
         <div className="glass-panel p-5 rounded-2xl border border-slate-800">
           <div className="flex items-center space-x-2 mb-4">
             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
@@ -147,40 +147,27 @@ export default function DashboardCharts({ data, thresholds }) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-100">
-                So Sánh Chỉ Số Khí Gas
+                Chỉ Số Gộp Gas Index
               </h3>
-              <p className="text-xs text-slate-400">Giá trị trung bình khoảng thời gian</p>
+              <p className="text-xs text-slate-400">Đã hợp nhất từ MQ2, MQ3 & MQ4</p>
             </div>
           </div>
 
           <div className="h-64 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={[
-                  {
-                    name: 'MQ2 (Khói)',
-                    value: Math.round(data.reduce((s, d) => s + d.mq2, 0) / data.length),
-                    fill: '#f43f5e',
-                  },
-                  {
-                    name: 'MQ3 (Cồn)',
-                    value: Math.round(data.reduce((s, d) => s + d.mq3, 0) / data.length),
-                    fill: '#a855f7',
-                  },
-                  {
-                    name: 'MQ4 (Methane)',
-                    value: Math.round(data.reduce((s, d) => s + d.mq4, 0) / data.length),
-                    fill: '#10b981',
-                  },
-                ]}
-                margin={{ top: 20, right: 20, left: -10, bottom: 20 }}
-              >
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gasIdxGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.5} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                <XAxis dataKey="displayLabel" stroke="#64748b" fontSize={10} tickLine={false} minTickGap={25} />
                 <YAxis stroke="#94a3b8" fontSize={11} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name="Nồng độ (PPM)" radius={[6, 6, 0, 0]} />
-              </BarChart>
+                <Area type="monotone" dataKey="gas_index" name="Gas Index" stroke="#6366f1" strokeWidth={2.5} fill="url(#gasIdxGrad)" />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>

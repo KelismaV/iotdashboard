@@ -1,7 +1,7 @@
 import Papa from 'papaparse';
 import { getCount, insertBatchLogs } from './db.js';
 
-const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1kzYAxH2W3ia5sU__4ycZNgGVxvj1bSBiXHULtjBmhQo/export?format=csv&gid=0';
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1836015410';
 
 function parseDateTime(dateStr, timeStr) {
   if (!dateStr) return new Date();
@@ -38,20 +38,38 @@ function parseDateTime(dateStr, timeStr) {
   return isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
+export function getExportUrl(sheetUrl) {
+  if (!sheetUrl) return DEFAULT_SHEET_URL;
+  if (sheetUrl.includes('/gviz/tq?tqx=out:csv')) return sheetUrl;
+  
+  const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (match && match[1]) {
+    const id = match[1];
+    let gid = '0';
+    const gidMatch = sheetUrl.match(/[?&]gid=([0-9]+)/);
+    if (gidMatch && gidMatch[1]) {
+      gid = gidMatch[1];
+    }
+    return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  }
+  return sheetUrl;
+}
+
 export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
   const currentCount = getCount();
   if (currentCount > 0) {
-    console.log(`✅ [SQLite Database Ready]: Cửa sở dữ liệu đã có sẵn ${currentCount.toLocaleString('vi-VN')} bản ghi. Khởi động 0.001s!`);
+    console.log(`✅ [SQLite Database Ready]: Cơ sở dữ liệu đã có sẵn ${currentCount.toLocaleString('vi-VN')} bản ghi. Khởi động 0.001s!`);
     return currentCount;
   }
 
   console.log('---------------------------------------------------------');
   console.log('🔄 [Seed Database]: Phát hiện Database mới tạo.');
-  console.log('⏳ Đang di dời (migrate) 340.000 bản ghi từ Google Sheets vào SQLite...');
+  console.log('⏳ Đang di dời (migrate) dữ liệu từ Google Sheets vào SQLite...');
   const startTime = Date.now();
 
   try {
-    const res = await fetch(sheetUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const targetUrl = getExportUrl(sheetUrl);
+    const res = await fetch(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
 
     const csvText = await res.text();
@@ -77,14 +95,19 @@ export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
     const statusIdx = headers.findIndex(h => h.includes('status') || h.includes('trạng thái'));
     const tempIdx = headers.findIndex(h => h.includes('temp') || h.includes('nhiệt'));
     const humIdx = headers.findIndex(h => h.includes('hum') || h.includes('ẩm'));
-    const mq2Idx = headers.findIndex(h => h.includes('mq2') || h.includes('mq-2'));
-    const mq3Idx = headers.findIndex(h => h.includes('mq3') || h.includes('mq-3'));
-    const mq4Idx = headers.findIndex(h => h.includes('mq4') || h.includes('mq-4'));
+    const mq2Idx = headers.findIndex(h => h.includes('mq2'));
+    const mq3Idx = headers.findIndex(h => h.includes('mq3'));
+    const mq4Idx = headers.findIndex(h => h.includes('mq4'));
+    const gasIndexIdx = headers.findIndex(h => h.includes('gas_index') && !h.includes('pct') && !h.includes('predict'));
+    const gasPctIdx = headers.findIndex(h => h.includes('pct') || h.includes('change'));
+    const predGasIdx = headers.findIndex(h => h.includes('predicted_gas_index') || (h.includes('predict') && h.includes('gas')));
+    const currentLevelIdx = headers.findIndex(h => h.includes('current_level') || (h.includes('current') && h.includes('level')));
+    const predictedLevelIdx = headers.findIndex(h => h.includes('predicted_level') || (h.includes('predict') && h.includes('level')));
 
     const records = [];
     for (let i = headerIndex + 1; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 4) continue;
+      if (!row || row.length < 3) continue;
 
       const dateStr = dateIdx !== -1 ? String(row[dateIdx] || '').trim() : '';
       const timeStr = timeIdx !== -1 ? String(row[timeIdx] || '').trim() : '';
@@ -95,8 +118,13 @@ export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
       const mq2 = parseFloat(row[mq2Idx]);
       const mq3 = parseFloat(row[mq3Idx]);
       const mq4 = parseFloat(row[mq4Idx]);
+      const gasIndex = gasIndexIdx !== -1 ? parseFloat(row[gasIndexIdx]) : 0;
+      const gasIndexPct = gasPctIdx !== -1 ? parseFloat(row[gasPctIdx]) : 0;
+      const predGasIndex = predGasIdx !== -1 ? parseFloat(row[predGasIdx]) : 0;
+      const currentLevel = currentLevelIdx !== -1 ? String(row[currentLevelIdx] || 'L0').trim() : 'L0';
+      const predictedLevel = predictedLevelIdx !== -1 ? String(row[predictedLevelIdx] || 'L0').trim() : 'L0';
 
-      if (isNaN(temp) && isNaN(hum) && isNaN(mq2)) continue;
+      if (isNaN(temp) && isNaN(hum) && isNaN(mq2) && isNaN(gasIndex)) continue;
 
       const dt = parseDateTime(dateStr, timeStr);
 
@@ -112,6 +140,11 @@ export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
         mq2: isNaN(mq2) ? 0 : Math.round(mq2),
         mq3: isNaN(mq3) ? 0 : Math.round(mq3),
         mq4: isNaN(mq4) ? 0 : Math.round(mq4),
+        gas_index: isNaN(gasIndex) ? 0 : Math.round(gasIndex * 10000) / 10000,
+        gas_index_pct: isNaN(gasIndexPct) ? 0 : Math.round(gasIndexPct * 100) / 100,
+        predicted_gas_index: isNaN(predGasIndex) ? 0 : Math.round(predGasIndex * 10000) / 10000,
+        current_level: currentLevel,
+        predicted_level: predictedLevel,
       });
     }
 

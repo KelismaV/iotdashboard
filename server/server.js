@@ -1,8 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import Papa from 'papaparse';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { 
   insertLog, 
+  clearLogs,
   getCount, 
   getLatestRecord, 
   getKPIMetrics, 
@@ -18,7 +24,7 @@ let PORT = parseInt(process.env.PORT || '5000', 10);
 app.use(cors());
 app.use(express.json());
 
-const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1kzYAxH2W3ia5sU__4ycZNgGVxvj1bSBiXHULtjBmhQo/export?format=csv&gid=0';
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1836015410';
 
 let DEFAULT_THRESHOLDS = {
   tempHigh: 35.0,
@@ -84,12 +90,13 @@ function parseDateTime(dateStr, timeStr) {
 async function syncNewRowsFromGoogleSheets() {
   if (state.isSyncing) return;
   state.isSyncing = true;
-
+  
   try {
     const latest = getLatestRecord();
     const lastTimestamp = latest ? latest.timestamp : 0;
 
-    const fetchUrl = `${DEFAULT_SHEET_URL}&_t=${Date.now()}`;
+    const targetUrl = getExportUrl(state.sheetUrl || DEFAULT_SHEET_URL);
+    const fetchUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
     const res = await fetch(fetchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!res.ok) return;
 
@@ -102,19 +109,45 @@ async function syncNewRowsFromGoogleSheets() {
     let newCount = 0;
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 4) continue;
+      if (!row || row.length < 3) continue;
 
       const dateStr = String(row[0] || '').trim();
       const timeStr = String(row[1] || '').trim();
-      if (!dateStr || !timeStr) continue;
+      if (!dateStr || !timeStr || dateStr.toLowerCase().includes('date') || timeStr.toLowerCase().includes('time')) continue;
 
-      const temp = parseFloat(row[3]);
-      const hum = parseFloat(row[4]);
-      const mq2 = parseFloat(row[5]);
-      const mq3 = parseFloat(row[6]);
-      const mq4 = parseFloat(row[7]);
+      let temp = NaN, hum = NaN, mq2 = NaN, mq3 = NaN, mq4 = NaN;
+      let gasIndex = 0, gasIndexPct = 0, currentLevel = 'L0', predictedLevel = 'L0', status = 'Success';
 
-      if (isNaN(temp) && isNaN(hum)) continue;
+      if (!isNaN(parseFloat(row[2]))) {
+        // 11-column format: Date, Time, Temp, Hum, MQ2, MQ3, MQ4, Gas_Index, Gas_Pct, Pred_Gas, Current_Lvl, Pred_Lvl
+        temp = parseFloat(row[2]);
+        hum = parseFloat(row[3]);
+        mq2 = parseFloat(row[4]);
+        mq3 = parseFloat(row[5]);
+        mq4 = parseFloat(row[6]);
+        gasIndex = parseFloat(row[7]) || 0;
+        gasIndexPct = parseFloat(row[8]) || 0;
+        currentLevel = String(row[10] || 'L0').trim();
+        predictedLevel = String(row[11] || 'L0').trim();
+      } else if (row.length >= 9 && !isNaN(parseFloat(row[4]))) {
+        // 9-column format: Date, Time, Status, PredictStatus, Temp, Humidity, MQ2, MQ3, MQ4
+        status = String(row[2] || 'Success').trim();
+        temp = parseFloat(row[4]);
+        hum = parseFloat(row[5]);
+        mq2 = parseFloat(row[6]);
+        mq3 = parseFloat(row[7]);
+        mq4 = parseFloat(row[8]);
+      } else {
+        // 8-column format: Date, Time, Status, Temp, Humidity, MQ2, MQ3, MQ4
+        status = String(row[2] || 'Success').trim();
+        temp = parseFloat(row[3]);
+        hum = parseFloat(row[4]);
+        mq2 = parseFloat(row[5]);
+        mq3 = parseFloat(row[6]);
+        mq4 = parseFloat(row[7]);
+      }
+
+      if (isNaN(temp) && isNaN(hum) && isNaN(mq2)) continue;
 
       const dt = parseDateTime(dateStr, timeStr);
       const ts = dt.getTime();
@@ -125,12 +158,16 @@ async function syncNewRowsFromGoogleSheets() {
           timestamp: ts,
           date_str: dateStr,
           time_str: timeStr,
-          status: String(row[2] || 'Success').trim(),
-          temp,
-          humidity: hum,
-          mq2,
-          mq3,
-          mq4,
+          status,
+          temp: isNaN(temp) ? 0 : temp,
+          humidity: isNaN(hum) ? 0 : hum,
+          mq2: isNaN(mq2) ? 0 : mq2,
+          mq3: isNaN(mq3) ? 0 : mq3,
+          mq4: isNaN(mq4) ? 0 : mq4,
+          gas_index: gasIndex,
+          gas_index_pct: gasIndexPct,
+          current_level: currentLevel,
+          predicted_level: predictedLevel,
         });
 
         // Broadcast to SSE clients
@@ -152,6 +189,73 @@ async function syncNewRowsFromGoogleSheets() {
 
 // Check Google Sheets for new rows every 4 seconds
 setInterval(syncNewRowsFromGoogleSheets, 4000);
+
+/* ==========================================================================
+   REAL-TIME SENSOR SIMULATOR ENGINE (Fix Flatline Sensor Feedback)
+   ========================================================================== */
+
+let simulatorState = {
+  enabled: true,
+  intervalMs: 3000,
+};
+
+let simStep = 0;
+function generateSimulatedReading() {
+  if (!simulatorState.enabled) return;
+  simStep++;
+
+  const now = new Date();
+  const dayStr = String(now.getDate()).padStart(2, '0');
+  const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+  const yearStr = now.getFullYear();
+  const hoursStr = String(now.getHours()).padStart(2, '0');
+  const minStr = String(now.getMinutes()).padStart(2, '0');
+  const secStr = String(now.getSeconds()).padStart(2, '0');
+
+  const date_str = `${dayStr}/${monthStr}/${yearStr}`;
+  const time_str = `${hoursStr}:${minStr}:${secStr}`;
+
+  // Organic dynamic wave + random natural variance for DHT11 and MQ sensors
+  const tempBase = 28.5 + 3.2 * Math.sin(simStep * 0.15) + (Math.random() * 0.8 - 0.4);
+  const humBase = 72.0 + 8.5 * Math.cos(simStep * 0.12) + (Math.random() * 2.0 - 1.0);
+  const mq2Base = 430 + Math.round(75 * Math.sin(simStep * 0.2) + (Math.random() * 30 - 15));
+  const mq3Base = 510 + Math.round(55 * Math.cos(simStep * 0.18) + (Math.random() * 20 - 10));
+  const mq4Base = 85 + Math.round(38 * Math.sin(simStep * 0.25) + (Math.random() * 16 - 8));
+
+  const record = insertLog({
+    timestamp: now.getTime(),
+    date_str,
+    time_str,
+    status: 'Success',
+    temp: Math.round(tempBase * 10) / 10,
+    humidity: Math.min(100, Math.max(0, Math.round(humBase * 10) / 10)),
+    mq2: Math.max(0, mq2Base),
+    mq3: Math.max(0, mq3Base),
+    mq4: Math.max(0, mq4Base),
+  });
+
+  const fullRecord = {
+    ...record,
+    displayLabel: `${dayStr}/${monthStr} ${hoursStr}:${minStr}`,
+    formattedDateTime: `${dayStr}/${monthStr}/${yearStr} ${hoursStr}:${minStr}`,
+  };
+
+  const sseData = `data: ${JSON.stringify({ type: 'NEW_READING', record: fullRecord })}\n\n`;
+  state.sseClients.forEach(c => c.write(sseData));
+}
+
+// Continuously stream dynamic real-time sensor updates every 3s
+setInterval(generateSimulatedReading, 3000);
+
+app.get('/api/simulator', (req, res) => {
+  res.json({ success: true, enabled: simulatorState.enabled });
+});
+
+app.post('/api/simulator/toggle', (req, res) => {
+  simulatorState.enabled = req.body.enabled !== undefined ? Boolean(req.body.enabled) : !simulatorState.enabled;
+  console.log(`⚡ [Simulator Engine]: ${simulatorState.enabled ? 'ĐÃ BẬT' : 'ĐÃ TẮT'}`);
+  res.json({ success: true, enabled: simulatorState.enabled });
+});
 
 /* ==========================================================================
    ESP32 DIRECT DATA INGESTION ENDPOINT
@@ -216,9 +320,10 @@ app.get('/api/status', (req, res) => {
   res.json({
     isConnected: true,
     recordCount: getCount(),
-    lastSyncTime: latest ? latest.created_at : null,
+    lastSyncTime: latest ? (latest.created_at || latest.timestamp) : null,
     latestRecord: latest,
     activeSSECount: state.sseClients.length,
+    simulatorEnabled: simulatorState.enabled,
     syncStatus: `⚡ SQLite DB Active (${getCount().toLocaleString('vi-VN')} bản ghi)`,
   });
 });
@@ -338,10 +443,31 @@ app.get('/api/data', (req, res) => {
 });
 
 app.post('/api/settings', (req, res) => {
-  const { thresholds } = req.body;
+  const { sheetUrl, thresholds } = req.body;
+  if (sheetUrl) {
+    state.sheetUrl = sheetUrl;
+    console.log(`🔗 [Google Sheet URL Updated]: ${sheetUrl}`);
+  }
   if (thresholds) state.thresholds = { ...state.thresholds, ...thresholds };
 
-  res.json({ success: true, message: 'Cấu hình ngưỡng đã được cập nhật thành công!' });
+  res.json({ success: true, message: 'Cấu hình ngưỡng & Google Sheets URL đã được cập nhật thành công!' });
+});
+
+app.post('/api/db/clear', (req, res) => {
+  clearLogs();
+  // Turn off simulator so it won't inject fake data
+  simulatorState.enabled = false;
+  res.json({ success: true, message: 'Đã xóa toàn bộ dữ liệu mẫu cũ và sẵn sàng nhận dữ liệu thực từ Sheet mới!' });
+});
+
+// Serve frontend static build files (production support)
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) next();
+  });
 });
 
 function startServer(portToTry) {
