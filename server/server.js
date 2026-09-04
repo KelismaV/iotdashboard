@@ -195,7 +195,7 @@ setInterval(syncNewRowsFromGoogleSheets, 4000);
    ========================================================================== */
 
 let simulatorState = {
-  enabled: true,
+  enabled: false,
   intervalMs: 3000,
 };
 

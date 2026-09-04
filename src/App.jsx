@@ -35,7 +35,7 @@ export default function App() {
   const [forecastData, setForecastData] = useState(null);
   const [statusInfo, setStatusInfo] = useState({ isConnected: true, recordCount: 0, lastSyncTime: null });
   const [filteredCount, setFilteredCount] = useState(0);
-  const [simulatorEnabled, setSimulatorEnabled] = useState(true);
+  const [simulatorEnabled, setSimulatorEnabled] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
