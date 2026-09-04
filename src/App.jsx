@@ -67,8 +67,21 @@ export default function App() {
         }
         if (kpiRes.thresholds) setThresholds(kpiRes.thresholds);
       }
-      if (chartRes.success) {
-        setChartPoints(chartRes.points);
+      if (chartRes.success && chartRes.points) {
+        if (!isSilent) {
+          // Lần đầu hoặc tải thủ công: gán toàn bộ mảng điểm
+          setChartPoints(chartRes.points);
+        } else {
+          // Cập nhật ngầm: chỉ nối các điểm mới hơn vào đuôi để giữ đồ thị tịnh tiến mượt, không giật
+          setChartPoints((prev) => {
+            if (!prev || prev.length === 0) return chartRes.points;
+            const lastPrevTs = prev[prev.length - 1]?.timestamp || 0;
+            const newPoints = chartRes.points.filter((p) => p.timestamp > lastPrevTs);
+            if (newPoints.length === 0) return prev; // Không có điểm mới -> giữ nguyên tham chiếu mảng, không re-render giật
+            const merged = [...prev, ...newPoints];
+            return merged.length > 120 ? merged.slice(merged.length - 120) : merged;
+          });
+        }
       }
     } catch (err) {
       console.error('Backend API error:', err);
@@ -92,6 +105,8 @@ export default function App() {
 
         setChartPoints((prev) => {
           if (!prev || prev.length === 0) return [newRec];
+          // Tránh trùng lặp nếu bản ghi đã tồn tại
+          if (prev[prev.length - 1]?.timestamp === newRec.timestamp) return prev;
           const updated = [...prev, newRec];
           return updated.length > 120 ? updated.slice(updated.length - 120) : updated;
         });

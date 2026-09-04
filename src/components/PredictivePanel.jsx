@@ -164,7 +164,7 @@ export default function PredictivePanel({ data }) {
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px' }}
                 />
                 <ReferenceLine y={0} stroke="#64748b" strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="gas_index_pct" name="% Thay đổi Gas Index" stroke="#a855f7" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="gas_index_pct" name="% Thay đổi Gas Index" stroke="#a855f7" strokeWidth={2.5} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -200,8 +200,8 @@ export default function PredictivePanel({ data }) {
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px' }}
                 />
-                <Line type="monotone" dataKey="gas_index" name="Gas Index Thực Tế" stroke="#6366f1" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="predicted_gas_index" name="Dự Báo Gas Index (t+24)" stroke="#ec4899" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+                <Line type="monotone" dataKey="gas_index" name="Gas Index Thực Tế" stroke="#6366f1" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="predicted_gas_index" name="Dự Báo Gas Index (t+24)" stroke="#ec4899" strokeWidth={2} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
