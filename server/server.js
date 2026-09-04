@@ -16,7 +16,7 @@ import {
   getRecentSamples, 
   getPaginatedLogs 
 } from './db.js';
-import { seedIfNeeded } from './seedGoogleSheets.js';
+import { seedIfNeeded, getExportUrl } from './seedGoogleSheets.js';
 
 const app = express();
 let PORT = parseInt(process.env.PORT || '5000', 10);
@@ -44,79 +44,114 @@ let state = {
   thresholds: { ...DEFAULT_THRESHOLDS },
   sseClients: [],
   isSyncing: false,
+  lastCheckTime: Date.now(),
 };
 
 // Initial seed from Google Sheets if database is new
 seedIfNeeded();
 
 function parseDateTime(dateStr, timeStr) {
-  if (!dateStr) return new Date();
+  if (!dateStr) return null;
   
-  const trimmedDate = dateStr.trim();
-  const trimmedTime = (timeStr || '00:00:00').trim();
+  const trimmedDate = String(dateStr).trim();
+  const trimmedTime = String(timeStr || '00:00:00').trim();
 
-  const timeParts = trimmedTime.split(':').map(p => parseInt(p, 10) || 0);
-  const hours = timeParts[0] || 0;
-  const minutes = timeParts[1] || 0;
-  const seconds = timeParts[2] || 0;
+  // Validate time format (HH:MM:SS or HH:MM)
+  const timeMatch = trimmedTime.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (!timeMatch) return null;
 
+  const hours = parseInt(timeMatch[1], 10);
+  const minutes = parseInt(timeMatch[2], 10);
+  const seconds = parseInt(timeMatch[3] || '0', 10);
+  if (hours > 23 || minutes > 59 || seconds > 59) return null;
+
+  // Format: DD/MM/YYYY or MM/DD/YYYY
   const slashParts = trimmedDate.split('/').map(p => parseInt(p, 10));
   if (slashParts.length === 3) {
-    let day, month, year;
-    if (slashParts[0] > 12) {
-      day = slashParts[0];
-      month = slashParts[1] - 1;
-      year = slashParts[2];
-    } else if (slashParts[1] > 12) {
-      month = slashParts[0] - 1;
-      day = slashParts[1];
-      year = slashParts[2];
-    } else {
-      day = slashParts[0];
-      month = slashParts[1] - 1;
-      year = slashParts[2];
+    let day = slashParts[0];
+    let month = slashParts[1];
+    let year = slashParts[2];
+
+    if (year < 100) year += 2000;
+    if (year < 2020 || year > 2050) return null;
+
+    if (month > 12 && day <= 12) {
+      const temp = day;
+      day = month;
+      month = temp;
     }
-    return new Date(year, month, day, hours, minutes, seconds);
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    const d = new Date(year, month - 1, day, hours, minutes, seconds);
+    return isNaN(d.getTime()) ? null : d;
   }
 
-  const combined = `${trimmedDate} ${trimmedTime}`;
-  const parsed = new Date(combined);
-  return isNaN(parsed.getTime()) ? new Date() : parsed;
+  // Format: YYYY-MM-DD
+  const dashParts = trimmedDate.split('-').map(p => parseInt(p, 10));
+  if (dashParts.length === 3) {
+    let year = dashParts[0];
+    let month = dashParts[1];
+    let day = dashParts[2];
+
+    if (year < 100) year += 2000;
+    if (year < 2020 || year > 2050) return null;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    const d = new Date(year, month - 1, day, hours, minutes, seconds);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  return null;
 }
 
 /**
  * Delta Sync Worker: Checks Google Sheets for new rows appended by pre-flashed ESP32
  */
 async function syncNewRowsFromGoogleSheets() {
-  if (state.isSyncing) return;
+  if (state.isSyncing && Date.now() - state.lastCheckTime < 10000) return;
   state.isSyncing = true;
-  
+  state.lastCheckTime = Date.now();
+
   try {
     const latest = getLatestRecord();
     const lastTimestamp = latest ? latest.timestamp : 0;
 
     const targetUrl = getExportUrl(state.sheetUrl || DEFAULT_SHEET_URL);
     const fetchUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
-    const res = await fetch(fetchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const res = await fetch(fetchUrl, { 
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(8000)
+    });
     if (!res.ok) return;
 
     const csvText = await res.text();
-    // Fast parse last 50KB tail for new rows
-    const tailText = csvText.slice(-50000);
-    const parsed = Papa.parse(tailText, { skipEmptyLines: true });
+    // Parse cleanly from a newline boundary to avoid slicing in the middle of a row
+    let cleanTail = csvText;
+    if (csvText.length > 200000) {
+      const cutPos = csvText.length - 200000;
+      const nl = csvText.indexOf('\n', cutPos);
+      cleanTail = nl !== -1 ? csvText.slice(nl + 1) : csvText;
+    }
+    const parsed = Papa.parse(cleanTail, { skipEmptyLines: true });
     const rows = parsed.data;
 
     let newCount = 0;
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 3) continue;
+      if (!row || row.length < 5) continue;
 
       const dateStr = String(row[0] || '').trim();
       const timeStr = String(row[1] || '').trim();
       if (!dateStr || !timeStr || dateStr.toLowerCase().includes('date') || timeStr.toLowerCase().includes('time')) continue;
 
+      const dt = parseDateTime(dateStr, timeStr);
+      if (!dt) continue; // STRICT VALIDATION: Skip any broken/garbled row!
+      const ts = dt.getTime();
+      if (isNaN(ts)) continue;
+
       let temp = NaN, hum = NaN, mq2 = NaN, mq3 = NaN, mq4 = NaN;
-      let gasIndex = 0, gasIndexPct = 0, currentLevel = 'L0', predictedLevel = 'L0', status = 'Success';
+      let gasIndex = 0, gasIndexPct = 0, predictedGasIndex = 0, currentLevel = 'L0', predictedLevel = 'L0', status = 'Success';
 
       if (!isNaN(parseFloat(row[2]))) {
         // 11-column format: Date, Time, Temp, Hum, MQ2, MQ3, MQ4, Gas_Index, Gas_Pct, Pred_Gas, Current_Lvl, Pred_Lvl
@@ -127,6 +162,7 @@ async function syncNewRowsFromGoogleSheets() {
         mq4 = parseFloat(row[6]);
         gasIndex = parseFloat(row[7]) || 0;
         gasIndexPct = parseFloat(row[8]) || 0;
+        predictedGasIndex = parseFloat(row[9]) || 0;
         currentLevel = String(row[10] || 'L0').trim();
         predictedLevel = String(row[11] || 'L0').trim();
       } else if (row.length >= 9 && !isNaN(parseFloat(row[4]))) {
@@ -149,9 +185,6 @@ async function syncNewRowsFromGoogleSheets() {
 
       if (isNaN(temp) && isNaN(hum) && isNaN(mq2)) continue;
 
-      const dt = parseDateTime(dateStr, timeStr);
-      const ts = dt.getTime();
-
       // Insert if this row is strictly newer than our SQLite latest record
       if (ts > lastTimestamp) {
         const record = insertLog({
@@ -166,6 +199,7 @@ async function syncNewRowsFromGoogleSheets() {
           mq4: isNaN(mq4) ? 0 : mq4,
           gas_index: gasIndex,
           gas_index_pct: gasIndexPct,
+          predicted_gas_index: predictedGasIndex,
           current_level: currentLevel,
           predicted_level: predictedLevel,
         });
@@ -181,7 +215,7 @@ async function syncNewRowsFromGoogleSheets() {
       console.log(`🔄 [Google Sheet Auto-Sync]: Nhận được ${newCount} bản ghi mới từ ESP32 ghi vào Google Sheets!`);
     }
   } catch (err) {
-    // Silent background error
+    console.error('❌ [Google Sheet Auto-Sync Error]:', err.message);
   } finally {
     state.isSyncing = false;
   }
@@ -321,6 +355,7 @@ app.get('/api/status', (req, res) => {
     isConnected: true,
     recordCount: getCount(),
     lastSyncTime: latest ? (latest.created_at || latest.timestamp) : null,
+    lastCheckTime: state.lastCheckTime || Date.now(),
     latestRecord: latest,
     activeSSECount: state.sseClients.length,
     simulatorEnabled: simulatorState.enabled,
@@ -453,11 +488,13 @@ app.post('/api/settings', (req, res) => {
   res.json({ success: true, message: 'Cấu hình ngưỡng & Google Sheets URL đã được cập nhật thành công!' });
 });
 
-app.post('/api/db/clear', (req, res) => {
+app.post('/api/db/clear', async (req, res) => {
   clearLogs();
   // Turn off simulator so it won't inject fake data
   simulatorState.enabled = false;
-  res.json({ success: true, message: 'Đã xóa toàn bộ dữ liệu mẫu cũ và sẵn sàng nhận dữ liệu thực từ Sheet mới!' });
+  // Re-seed from sheet to get full history
+  await seedIfNeeded();
+  res.json({ success: true, message: 'Đã xóa dữ liệu cũ và đồng bộ lại toàn bộ dữ liệu thực từ Sheet!' });
 });
 
 // Serve frontend static build files (production support)

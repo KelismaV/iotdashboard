@@ -44,8 +44,8 @@ export default function PredictivePanel({ data }) {
                   <span>AI Trend Model</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Theo dõi % biến thiên xu hướng (`Gas_Index_pct_change`) và cấp độ cảnh báo tương lai (`Predicted_Level`)
+              <p className="text-xs text-slate-400 mt-1">
+                Theo dõi % biến thiên xu hướng (<span className="text-indigo-300 font-medium">Gas_Index_pct_change</span>) và cấp độ cảnh báo tương lai (<span className="text-purple-300 font-medium">Predicted_Level</span>)
               </p>
             </div>
           </div>

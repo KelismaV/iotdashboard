@@ -3,7 +3,7 @@ import Navbar from './components/Navbar';
 import KPICards from './components/KPICards';
 import TimeFilter from './components/TimeFilter';
 import DashboardCharts from './components/DashboardCharts';
-import SafetyEvaluation from './components/SafetyEvaluation';
+import SafetyAlert from './components/SafetyAlert';
 import PredictivePanel from './components/PredictivePanel';
 import DataTable from './components/DataTable';
 import SettingsModal from './components/SettingsModal';
@@ -268,7 +268,6 @@ export default function App() {
             {activeTab === 'dashboard' && (
               <>
                 <DashboardCharts data={chartPoints} thresholds={thresholds} />
-                <SafetyEvaluation latestRecord={chartPoints[chartPoints.length - 1]} thresholds={thresholds} />
               </>
             )}
 
@@ -277,7 +276,7 @@ export default function App() {
             )}
 
             {activeTab === 'safety' && (
-              <SafetyEvaluation latestRecord={chartPoints[chartPoints.length - 1]} thresholds={thresholds} />
+              <SafetyAlert data={chartPoints} />
             )}
 
             {activeTab === 'table' && (
