@@ -6,9 +6,7 @@ import {
   Wine, 
   Wind, 
   TrendingUp, 
-  TrendingDown, 
-  AlertTriangle,
-  CheckCircle2
+  TrendingDown
 } from 'lucide-react';
 
 export default function KPICards({ kpiData, thresholds }) {
@@ -105,30 +103,7 @@ export default function KPICards({ kpiData, thresholds }) {
         </span>
       );
     }
-
-    const val = card.data.current;
-    if (val >= card.criticalLimit) {
-      return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
-          <AlertTriangle className="w-3 h-3" />
-          <span>Nguy hiểm</span>
-        </span>
-      );
-    }
-    if (val >= card.warningLimit) {
-      return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-          <AlertTriangle className="w-3 h-3" />
-          <span>Cảnh báo</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-        <CheckCircle2 className="w-3 h-3" />
-        <span>An toàn</span>
-      </span>
-    );
+    return null;
   };
 
   return (
