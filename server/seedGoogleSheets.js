@@ -58,6 +58,72 @@ function parseDateTime(dateStr, timeStr) {
   return null;
 }
 
+// Cache for active tab GID to avoid scanning HTML every few seconds
+let activeGidCache = {
+  gid: null,
+  tabName: null,
+  lastChecked: 0
+};
+
+/**
+ * Fetch all available tabs from the Google Sheet HTML and pick the latest month (e.g. 2026_11 > 2026_10)
+ */
+export async function getLatestTabInfo(sheetId) {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+    const res = await fetch(url, { 
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const regex = /\[(\d+),0,\\"(\d+)\\",\[\{\\"1\\":\[\[0,0,\\"([^\\"]+)\\"/g;
+    const tabs = [];
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      tabs.push({ index: parseInt(match[1], 10), gid: match[2], name: match[3] });
+    }
+    if (tabs.length === 0) return null;
+
+    // Sắp xếp giảm dần theo tên (VD: "2026_12" > "2026_11" > "2026_10" > "2026_09")
+    tabs.sort((a, b) => b.name.localeCompare(a.name));
+    return tabs[0];
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function getDynamicExportUrl(sheetUrl) {
+  if (!sheetUrl) return DEFAULT_SHEET_URL;
+  const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match || !match[1]) return sheetUrl;
+  const id = match[1];
+
+  // Kiểm tra cache (làm mới mỗi 5 phút để phát hiện khi sang tháng mới)
+  const now = Date.now();
+  if (activeGidCache.gid && (now - activeGidCache.lastChecked < 300000)) {
+    return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${activeGidCache.gid}`;
+  }
+
+  const latestTab = await getLatestTabInfo(id);
+  if (latestTab) {
+    if (activeGidCache.gid && activeGidCache.gid !== latestTab.gid) {
+      console.log(`📅 [Auto Tab Detection]: Tự động chuyển sang trang tháng mới: "${latestTab.name}" (gid=${latestTab.gid})`);
+    }
+    activeGidCache = {
+      gid: latestTab.gid,
+      tabName: latestTab.name,
+      lastChecked: now
+    };
+    return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${latestTab.gid}`;
+  }
+
+  // Fallback nếu không parse được HTML
+  const gidMatch = sheetUrl.match(/[?&]gid=([0-9]+)/);
+  const fallbackGid = gidMatch ? gidMatch[1] : '1149125247';
+  return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${fallbackGid}`;
+}
+
 export function getExportUrl(sheetUrl) {
   if (!sheetUrl) return DEFAULT_SHEET_URL;
   if (sheetUrl.includes('/gviz/tq?tqx=out:csv')) return sheetUrl;

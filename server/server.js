@@ -16,7 +16,7 @@ import {
   getRecentSamples, 
   getPaginatedLogs 
 } from './db.js';
-import { seedIfNeeded, getExportUrl } from './seedGoogleSheets.js';
+import { seedIfNeeded, getExportUrl, getDynamicExportUrl } from './seedGoogleSheets.js';
 
 const app = express();
 let PORT = parseInt(process.env.PORT || '5000', 10);
@@ -119,7 +119,7 @@ async function syncNewRowsFromGoogleSheets() {
     const latest = getLatestRecord();
     const lastTimestamp = latest ? latest.timestamp : 0;
 
-    const targetUrl = getExportUrl(state.sheetUrl || DEFAULT_SHEET_URL);
+    const targetUrl = await getDynamicExportUrl(state.sheetUrl || DEFAULT_SHEET_URL);
     const fetchUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
     const res = await fetch(fetchUrl, { 
       headers: { 'User-Agent': 'Mozilla/5.0' },
