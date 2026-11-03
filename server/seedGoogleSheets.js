@@ -1,5 +1,15 @@
+import Database from 'better-sqlite3';
 import Papa from 'papaparse';
-import { getCount, insertBatchLogs } from './db.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import { 
+  insertBatchLogs, 
+  getCount 
+} from './db.js';
 
 const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1149125247';
 
@@ -9,7 +19,6 @@ function parseDateTime(dateStr, timeStr) {
   const trimmedDate = String(dateStr).trim();
   const trimmedTime = String(timeStr || '00:00:00').trim();
 
-  // Validate time format (HH:MM:SS or HH:MM)
   const timeMatch = trimmedTime.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
   if (!timeMatch) return null;
 
@@ -66,16 +75,16 @@ let activeGidCache = {
 };
 
 /**
- * Fetch all available tabs from the Google Sheet HTML and pick the latest month (e.g. 2026_11 > 2026_10)
+ * Fetch all available tabs from the Google Sheet HTML (e.g. 2026_09, 2026_10, 2026_11)
  */
-export async function getLatestTabInfo(sheetId) {
+export async function getAllTabsInfo(sheetId) {
   try {
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
     const res = await fetch(url, { 
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(6000)
+      signal: AbortSignal.timeout(8000)
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const html = await res.text();
     const regex = /\[(\d+),0,\\"(\d+)\\",\[\{\\"1\\":\[\[0,0,\\"([^\\"]+)\\"/g;
     const tabs = [];
@@ -83,14 +92,21 @@ export async function getLatestTabInfo(sheetId) {
     while ((match = regex.exec(html)) !== null) {
       tabs.push({ index: parseInt(match[1], 10), gid: match[2], name: match[3] });
     }
-    if (tabs.length === 0) return null;
-
-    // Sắp xếp giảm dần theo tên (VD: "2026_12" > "2026_11" > "2026_10" > "2026_09")
-    tabs.sort((a, b) => b.name.localeCompare(a.name));
-    return tabs[0];
+    return tabs;
   } catch (err) {
-    return null;
+    return [];
   }
+}
+
+/**
+ * Fetch all available tabs from the Google Sheet HTML and pick the latest month (e.g. 2026_11 > 2026_10)
+ */
+export async function getLatestTabInfo(sheetId) {
+  const tabs = await getAllTabsInfo(sheetId);
+  if (tabs.length === 0) return null;
+  // Sắp xếp giảm dần theo tên (VD: "2026_12" > "2026_11" > "2026_10" > "2026_09")
+  tabs.sort((a, b) => b.name.localeCompare(a.name));
+  return tabs[0];
 }
 
 export async function getDynamicExportUrl(sheetUrl) {
@@ -118,7 +134,6 @@ export async function getDynamicExportUrl(sheetUrl) {
     return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${latestTab.gid}`;
   }
 
-  // Fallback nếu không parse được HTML
   const gidMatch = sheetUrl.match(/[?&]gid=([0-9]+)/);
   const fallbackGid = gidMatch ? gidMatch[1] : '1149125247';
   return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${fallbackGid}`;
@@ -141,10 +156,89 @@ export function getExportUrl(sheetUrl) {
   return sheetUrl;
 }
 
+/**
+ * Helper to parse CSV text from a single tab and return formatted records
+ */
+function parseCsvRows(csvText) {
+  const parsed = Papa.parse(csvText, { skipEmptyLines: true });
+  const rows = parsed.data;
+  if (!rows || rows.length === 0) return [];
+
+  let headerIndex = -1;
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
+    const rowStr = rows[i].join(' ').toLowerCase();
+    if ((rowStr.includes('date') || rowStr.includes('ngày')) && 
+        (rowStr.includes('temperature') || rowStr.includes('temp') || rowStr.includes('nhiệt độ'))) {
+      headerIndex = i;
+      break;
+    }
+  }
+  if (headerIndex === -1) headerIndex = 0;
+
+  const headers = rows[headerIndex].map(h => String(h).trim().toLowerCase());
+  const dateIdx = headers.findIndex(h => h.includes('date') || h.includes('ngày'));
+  const timeIdx = headers.findIndex(h => h.includes('time') || h.includes('giờ'));
+  const statusIdx = headers.findIndex(h => h.includes('status') || h.includes('trạng thái'));
+  const tempIdx = headers.findIndex(h => h.includes('temp') || h.includes('nhiệt'));
+  const humIdx = headers.findIndex(h => h.includes('hum') || h.includes('ẩm'));
+  const mq2Idx = headers.findIndex(h => h.includes('mq2'));
+  const mq3Idx = headers.findIndex(h => h.includes('mq3'));
+  const mq4Idx = headers.findIndex(h => h.includes('mq4'));
+  const gasIndexIdx = headers.findIndex(h => h.includes('gas_index') && !h.includes('pct') && !h.includes('predict'));
+  const gasPctIdx = headers.findIndex(h => h.includes('pct') || h.includes('change'));
+  const predGasIdx = headers.findIndex(h => h.includes('predicted_gas_index') || (h.includes('predict') && h.includes('gas')));
+  const currentLevelIdx = headers.findIndex(h => h.includes('current_level') || (h.includes('current') && h.includes('level')));
+  const predictedLevelIdx = headers.findIndex(h => h.includes('predicted_level') || (h.includes('predict') && h.includes('level')));
+
+  const records = [];
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length < 3) continue;
+
+    const dateStr = dateIdx !== -1 ? String(row[dateIdx] || '').trim() : '';
+    const timeStr = timeIdx !== -1 ? String(row[timeIdx] || '').trim() : '';
+    if (!dateStr && !timeStr) continue;
+
+    const temp = parseFloat(row[tempIdx]);
+    const hum = parseFloat(row[humIdx]);
+    const mq2 = parseFloat(row[mq2Idx]);
+    const mq3 = parseFloat(row[mq3Idx]);
+    const mq4 = parseFloat(row[mq4Idx]);
+    const gasIndex = gasIndexIdx !== -1 ? parseFloat(row[gasIndexIdx]) : 0;
+    const gasIndexPct = gasPctIdx !== -1 ? parseFloat(row[gasPctIdx]) : 0;
+    const predGasIndex = predGasIdx !== -1 ? parseFloat(row[predGasIdx]) : 0;
+    const currentLevel = currentLevelIdx !== -1 ? String(row[currentLevelIdx] || 'L0').trim() : 'L0';
+    const predictedLevel = predictedLevelIdx !== -1 ? String(row[predictedLevelIdx] || 'L0').trim() : 'L0';
+
+    if (isNaN(temp) && isNaN(hum) && isNaN(mq2) && isNaN(gasIndex)) continue;
+
+    const dt = parseDateTime(dateStr, timeStr);
+    if (!dt) continue;
+
+    records.push({
+      timestamp: dt.getTime(),
+      rawDate: dateStr,
+      rawTime: timeStr,
+      formattedDate: dateStr,
+      formattedTime: timeStr,
+      status: statusIdx !== -1 ? String(row[statusIdx] || 'Success').trim() : 'Success',
+      temp: isNaN(temp) ? 0 : Math.round(temp * 10) / 10,
+      humidity: isNaN(hum) ? 0 : Math.round(hum * 10) / 10,
+      mq2: isNaN(mq2) ? 0 : Math.round(mq2),
+      mq3: isNaN(mq3) ? 0 : Math.round(mq3),
+      mq4: isNaN(mq4) ? 0 : Math.round(mq4),
+      gas_index: isNaN(gasIndex) ? 0 : Math.round(gasIndex * 10000) / 10000,
+      gas_index_pct: isNaN(gasIndexPct) ? 0 : Math.round(gasIndexPct * 100) / 100,
+      predicted_gas_index: isNaN(predGasIndex) ? 0 : Math.round(predGasIndex * 10000) / 10000,
+      current_level: currentLevel,
+      predicted_level: predictedLevel,
+    });
+  }
+
+  return records;
+}
+
 export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
-  try {
-    sheetUrl = await getDynamicExportUrl(sheetUrl);
-  } catch (e) {}
   const currentCount = getCount();
   if (currentCount > 0) {
     console.log(`✅ [SQLite Database Ready]: Cơ sở dữ liệu đã có sẵn ${currentCount.toLocaleString('vi-VN')} bản ghi. Khởi động 0.001s!`);
@@ -152,99 +246,58 @@ export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
   }
 
   console.log('---------------------------------------------------------');
-  console.log('🔄 [Seed Database]: Phát hiện Database mới tạo.');
-  console.log('⏳ Đang di dời (migrate) dữ liệu từ Google Sheets vào SQLite...');
+  console.log('🔄 [Seed Database]: Phát hiện Database mới tạo hoặc đang đồng bộ lại.');
+  console.log('⏳ Đang di dời toàn bộ lịch sử các tháng từ Google Sheets vào SQLite...');
   const startTime = Date.now();
 
   try {
-    const targetUrl = getExportUrl(sheetUrl);
-    const res = await fetch(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+    const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const id = match ? match[1] : '1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4';
 
-    const csvText = await res.text();
-    const parsed = Papa.parse(csvText, { skipEmptyLines: true });
-    const rows = parsed.data;
+    // 1. Quét danh sách tất cả các tab tháng
+    const allTabs = await getAllTabsInfo(id);
+    let targetTabs = allTabs;
 
-    if (!rows || rows.length === 0) return 0;
+    // Sắp xếp các tab theo thứ tự thời gian tăng dần (tháng cũ trước, tháng mới sau)
+    if (targetTabs && targetTabs.length > 0) {
+      targetTabs.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // Fallback nếu không quét được tab
+      targetTabs = [{ name: 'Current', gid: '1149125247' }];
+    }
 
-    let headerIndex = -1;
-    for (let i = 0; i < Math.min(rows.length, 25); i++) {
-      const rowStr = rows[i].join(' ').toLowerCase();
-      if ((rowStr.includes('date') || rowStr.includes('ngày')) && 
-          (rowStr.includes('temperature') || rowStr.includes('temp') || rowStr.includes('nhiệt độ'))) {
-        headerIndex = i;
-        break;
+    console.log(`📑 Phát hiện ${targetTabs.length} trang dữ liệu: ${targetTabs.map(t => t.name).join(', ')}`);
+
+    let totalImported = 0;
+
+    for (const tab of targetTabs) {
+      const tabUrl = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${tab.gid}`;
+      console.log(`⏳ Đang tải dữ liệu trang "${tab.name}"...`);
+      try {
+        const res = await fetch(tabUrl, { 
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          signal: AbortSignal.timeout(30000)
+        });
+        if (!res.ok) continue;
+
+        const csvText = await res.text();
+        const records = parseCsvRows(csvText);
+        records.sort((a, b) => a.timestamp - b.timestamp);
+
+        if (records.length > 0) {
+          const inserted = insertBatchLogs(records);
+          totalImported += inserted;
+          console.log(`  ✓ Đã nhập ${inserted.toLocaleString('vi-VN')} bản ghi từ "${tab.name}"`);
+        }
+      } catch (tabErr) {
+        console.error(`  ❌ Lỗi tải trang "${tab.name}":`, tabErr.message);
       }
     }
-    if (headerIndex === -1) headerIndex = 0;
 
-    const headers = rows[headerIndex].map(h => String(h).trim().toLowerCase());
-    const dateIdx = headers.findIndex(h => h.includes('date') || h.includes('ngày'));
-    const timeIdx = headers.findIndex(h => h.includes('time') || h.includes('giờ'));
-    const statusIdx = headers.findIndex(h => h.includes('status') || h.includes('trạng thái'));
-    const tempIdx = headers.findIndex(h => h.includes('temp') || h.includes('nhiệt'));
-    const humIdx = headers.findIndex(h => h.includes('hum') || h.includes('ẩm'));
-    const mq2Idx = headers.findIndex(h => h.includes('mq2'));
-    const mq3Idx = headers.findIndex(h => h.includes('mq3'));
-    const mq4Idx = headers.findIndex(h => h.includes('mq4'));
-    const gasIndexIdx = headers.findIndex(h => h.includes('gas_index') && !h.includes('pct') && !h.includes('predict'));
-    const gasPctIdx = headers.findIndex(h => h.includes('pct') || h.includes('change'));
-    const predGasIdx = headers.findIndex(h => h.includes('predicted_gas_index') || (h.includes('predict') && h.includes('gas')));
-    const currentLevelIdx = headers.findIndex(h => h.includes('current_level') || (h.includes('current') && h.includes('level')));
-    const predictedLevelIdx = headers.findIndex(h => h.includes('predicted_level') || (h.includes('predict') && h.includes('level')));
-
-    const records = [];
-    for (let i = headerIndex + 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row || row.length < 3) continue;
-
-      const dateStr = dateIdx !== -1 ? String(row[dateIdx] || '').trim() : '';
-      const timeStr = timeIdx !== -1 ? String(row[timeIdx] || '').trim() : '';
-      if (!dateStr && !timeStr) continue;
-
-      const temp = parseFloat(row[tempIdx]);
-      const hum = parseFloat(row[humIdx]);
-      const mq2 = parseFloat(row[mq2Idx]);
-      const mq3 = parseFloat(row[mq3Idx]);
-      const mq4 = parseFloat(row[mq4Idx]);
-      const gasIndex = gasIndexIdx !== -1 ? parseFloat(row[gasIndexIdx]) : 0;
-      const gasIndexPct = gasPctIdx !== -1 ? parseFloat(row[gasPctIdx]) : 0;
-      const predGasIndex = predGasIdx !== -1 ? parseFloat(row[predGasIdx]) : 0;
-      const currentLevel = currentLevelIdx !== -1 ? String(row[currentLevelIdx] || 'L0').trim() : 'L0';
-      const predictedLevel = predictedLevelIdx !== -1 ? String(row[predictedLevelIdx] || 'L0').trim() : 'L0';
-
-      if (isNaN(temp) && isNaN(hum) && isNaN(mq2) && isNaN(gasIndex)) continue;
-
-      const dt = parseDateTime(dateStr, timeStr);
-      if (!dt) continue;
-
-      records.push({
-        timestamp: dt.getTime(),
-        rawDate: dateStr,
-        rawTime: timeStr,
-        formattedDate: dateStr,
-        formattedTime: timeStr,
-        status: statusIdx !== -1 ? String(row[statusIdx] || 'Success').trim() : 'Success',
-        temp: isNaN(temp) ? 0 : Math.round(temp * 10) / 10,
-        humidity: isNaN(hum) ? 0 : Math.round(hum * 10) / 10,
-        mq2: isNaN(mq2) ? 0 : Math.round(mq2),
-        mq3: isNaN(mq3) ? 0 : Math.round(mq3),
-        mq4: isNaN(mq4) ? 0 : Math.round(mq4),
-        gas_index: isNaN(gasIndex) ? 0 : Math.round(gasIndex * 10000) / 10000,
-        gas_index_pct: isNaN(gasIndexPct) ? 0 : Math.round(gasIndexPct * 100) / 100,
-        predicted_gas_index: isNaN(predGasIndex) ? 0 : Math.round(predGasIndex * 10000) / 10000,
-        current_level: currentLevel,
-        predicted_level: predictedLevel,
-      });
-    }
-
-    records.sort((a, b) => a.timestamp - b.timestamp);
-    const count = insertBatchLogs(records);
     const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
-
-    console.log(`✅ [Seed Success]: Đã chèn ${count.toLocaleString('vi-VN')} bản ghi vào SQLite trong ${durationSec}s!`);
+    console.log(`✅ [Seed All Success]: Đã hoàn tất nhập toàn bộ ${totalImported.toLocaleString('vi-VN')} bản ghi vào SQLite trong ${durationSec}s!`);
     console.log('---------------------------------------------------------');
-    return count;
+    return totalImported;
   } catch (err) {
     console.error('❌ [Seed Migration Error]:', err.message);
     return 0;
