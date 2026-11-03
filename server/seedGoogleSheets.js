@@ -191,13 +191,20 @@ function parseCsvRows(csvText) {
   const predictedLevelIdx = headers.findIndex(h => h.includes('predicted_level') || (h.includes('predict') && h.includes('level')));
 
   const records = [];
+  let lastValidDate = null;
   for (let i = headerIndex + 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.length < 3) continue;
 
-    const dateStr = dateIdx !== -1 ? String(row[dateIdx] || '').trim() : '';
+    let dateStr = dateIdx !== -1 ? String(row[dateIdx] || '').trim() : '';
     const timeStr = timeIdx !== -1 ? String(row[timeIdx] || '').trim() : '';
-    if (!dateStr && !timeStr) continue;
+    if (!dateStr && lastValidDate) {
+      dateStr = lastValidDate;
+    }
+    if (dateStr) {
+      lastValidDate = dateStr;
+    }
+    if (!dateStr || !timeStr) continue;
 
     const temp = parseFloat(row[tempIdx]);
     const hum = parseFloat(row[humIdx]);
@@ -271,7 +278,7 @@ export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
     let totalImported = 0;
 
     for (const tab of targetTabs) {
-      const tabUrl = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${tab.gid}`;
+      const tabUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${tab.gid}`;
       console.log(`⏳ Đang tải dữ liệu trang "${tab.name}"...`);
       try {
         const res = await fetch(tabUrl, { 
