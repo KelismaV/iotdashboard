@@ -142,6 +142,9 @@ export function getExportUrl(sheetUrl) {
 }
 
 export async function seedIfNeeded(sheetUrl = DEFAULT_SHEET_URL) {
+  try {
+    sheetUrl = await getDynamicExportUrl(sheetUrl);
+  } catch (e) {}
   const currentCount = getCount();
   if (currentCount > 0) {
     console.log(`✅ [SQLite Database Ready]: Cơ sở dữ liệu đã có sẵn ${currentCount.toLocaleString('vi-VN')} bản ghi. Khởi động 0.001s!`);
