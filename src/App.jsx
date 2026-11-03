@@ -15,7 +15,6 @@ import {
   fetchForecasts,
   updateServerSettings,
   subscribeToSensorStream,
-  toggleSimulator,
   clearDatabase
 } from './services/api';
 
@@ -35,7 +34,6 @@ export default function App() {
   const [forecastData, setForecastData] = useState(null);
   const [statusInfo, setStatusInfo] = useState({ isConnected: true, recordCount: 0, lastSyncTime: null });
   const [filteredCount, setFilteredCount] = useState(0);
-  const [simulatorEnabled, setSimulatorEnabled] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -57,9 +55,6 @@ export default function App() {
       ]);
 
       setStatusInfo(statusRes);
-      if (statusRes.simulatorEnabled !== undefined) {
-        setSimulatorEnabled(statusRes.simulatorEnabled);
-      }
       if (kpiRes.success) {
         setKpiData(kpiRes.metrics);
         if (kpiRes.filteredCount !== undefined) {
@@ -148,18 +143,6 @@ export default function App() {
     return () => clearInterval(timer);
   }, [refreshInterval, loadDashboardData]);
 
-  // Handle Toggle Simulator
-  const handleToggleSimulator = async () => {
-    try {
-      const res = await toggleSimulator(!simulatorEnabled);
-      if (res.success) {
-        setSimulatorEnabled(res.enabled);
-      }
-    } catch (err) {
-      console.error('Lỗi toggle simulator:', err);
-    }
-  };
-
   // Load Forecasts when Analytics Tab is active
   useEffect(() => {
     if (activeTab === 'analytics') {
@@ -177,7 +160,6 @@ export default function App() {
       await clearDatabase();
       setChartPoints([]);
       setKpiData(null);
-      setSimulatorEnabled(false);
       await loadDashboardData(false);
     } catch (err) {
       console.error('Lỗi xóa database:', err);
@@ -198,8 +180,6 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         refreshInterval={refreshInterval}
         setRefreshInterval={setRefreshInterval}
-        simulatorEnabled={simulatorEnabled}
-        onToggleSimulator={handleToggleSimulator}
       />
 
       {/* Main Content Container */}

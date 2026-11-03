@@ -8,8 +8,7 @@ import {
   ShieldAlert, 
   Table, 
   TrendingUp,
-  Clock,
-  Zap
+  Clock
 } from 'lucide-react';
 
 export default function Navbar({
@@ -21,9 +20,7 @@ export default function Navbar({
   onManualRefresh,
   onOpenSettings,
   refreshInterval,
-  setRefreshInterval,
-  simulatorEnabled,
-  onToggleSimulator
+  setRefreshInterval
 }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard Tổng Quan', icon: BarChart2 },
@@ -81,20 +78,6 @@ export default function Navbar({
 
           {/* Right Section: Real-time Status & Actions */}
           <div className="flex items-center space-x-3">
-            
-            {/* Real-time Simulator Toggle Button */}
-            <button
-              onClick={onToggleSimulator}
-              title={simulatorEnabled ? 'Tắt bộ sinh dữ liệu Real-time' : 'Bật bộ sinh dữ liệu Real-time (Đảm bảo số liệu luôn biến thiên)'}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 ${
-                simulatorEnabled
-                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 shadow-sm shadow-amber-500/10'
-                  : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200'
-              }`}
-            >
-              <Zap className={`w-3.5 h-3.5 ${simulatorEnabled ? 'text-amber-400 fill-amber-400/30 animate-pulse' : 'text-slate-500'}`} />
-              <span className="hidden sm:inline">{simulatorEnabled ? 'Live Stream On' : 'Live Stream Off'}</span>
-            </button>
 
             {/* Connection Indicator */}
             <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-lg glass-card text-xs">

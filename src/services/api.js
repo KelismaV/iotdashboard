@@ -45,16 +45,6 @@ export async function updateServerSettings(sheetUrl, thresholds) {
   return await res.json();
 }
 
-export async function toggleSimulator(enabled) {
-  const res = await fetch(`${API_BASE}/simulator/toggle`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled }),
-  });
-  if (!res.ok) throw new Error('Lỗi bật/tắt bộ giả lập real-time');
-  return await res.json();
-}
-
 export async function clearDatabase() {
   const res = await fetch(`${API_BASE}/db/clear`, {
     method: 'POST',
