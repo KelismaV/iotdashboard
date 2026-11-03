@@ -125,7 +125,7 @@ export default function SettingsModal({
             {/* MQ2 Limit */}
             <div>
               <div className="flex justify-between mb-1">
-                <span>Ngưỡng MQ2 (Khói/LPG PPM):</span>
+                <span>Ngưỡng MQ2 (PPM):</span>
                 <strong className="text-rose-400 font-mono">{mq2Thresh} PPM</strong>
               </div>
               <input
@@ -142,7 +142,7 @@ export default function SettingsModal({
             {/* MQ3 Limit */}
             <div>
               <div className="flex justify-between mb-1">
-                <span>Ngưỡng MQ3 (Cồn/Ethanol PPM):</span>
+                <span>Ngưỡng MQ3 (PPM):</span>
                 <strong className="text-purple-400 font-mono">{mq3Thresh} PPM</strong>
               </div>
               <input
@@ -159,7 +159,7 @@ export default function SettingsModal({
             {/* MQ4 Limit */}
             <div>
               <div className="flex justify-between mb-1">
-                <span>Ngưỡng MQ4 (Methane PPM):</span>
+                <span>Ngưỡng MQ4 (PPM):</span>
                 <strong className="text-emerald-400 font-mono">{mq4Thresh} PPM</strong>
               </div>
               <input

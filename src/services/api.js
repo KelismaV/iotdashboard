@@ -53,6 +53,22 @@ export async function clearDatabase() {
   return await res.json();
 }
 
+export async function fetchStreamMode() {
+  const res = await fetch(`${API_BASE}/stream-mode`);
+  if (!res.ok) throw new Error('Lỗi kiểm tra chế độ Live Stream');
+  return await res.json();
+}
+
+export async function toggleStreamMode(liveRealtime) {
+  const res = await fetch(`${API_BASE}/stream-mode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ liveRealtime }),
+  });
+  if (!res.ok) throw new Error('Lỗi cập nhật chế độ Live Stream');
+  return await res.json();
+}
+
 /**
  * Subscribe to Real-Time Server-Sent Events (SSE) Stream
  */

@@ -39,7 +39,7 @@ export default function KPICards({ kpiData, thresholds }) {
     },
     {
       id: 'mq2',
-      title: 'Khí Gas MQ2 (Khói)',
+      title: 'Khí Gas MQ2',
       unit: 'PPM',
       data: kpiData.mq2,
       icon: Flame,
@@ -51,7 +51,7 @@ export default function KPICards({ kpiData, thresholds }) {
     },
     {
       id: 'mq3',
-      title: 'Khí Gas MQ3 (Cồn)',
+      title: 'Khí Gas MQ3',
       unit: 'PPM',
       data: kpiData.mq3,
       icon: Wine,
@@ -63,7 +63,7 @@ export default function KPICards({ kpiData, thresholds }) {
     },
     {
       id: 'mq4',
-      title: 'Khí Gas MQ4 (Methane)',
+      title: 'Khí Gas MQ4',
       unit: 'PPM',
       data: kpiData.mq4,
       icon: Wind,
@@ -75,7 +75,7 @@ export default function KPICards({ kpiData, thresholds }) {
     },
     {
       id: 'gas_index',
-      title: 'Gas Index (Chỉ Số Gộp)',
+      title: 'Gas Index',
       unit: 'Idx',
       data: kpiData.gas_index || { current: 0, avg: 0, min: 0, max: 0, trend: 0 },
       icon: Flame,

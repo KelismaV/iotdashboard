@@ -15,7 +15,9 @@ import {
   fetchForecasts,
   updateServerSettings,
   subscribeToSensorStream,
-  clearDatabase
+  clearDatabase,
+  fetchStreamMode,
+  toggleStreamMode
 } from './services/api';
 
 import { DEFAULT_SHEET_URL } from './services/sheetService';
@@ -39,6 +41,31 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [liveRealtime, setLiveRealtime] = useState(true);
+
+  // Sync initial stream mode from backend
+  useEffect(() => {
+    fetchStreamMode()
+      .then((res) => {
+        if (res && res.success && typeof res.liveRealtime === 'boolean') {
+          setLiveRealtime(res.liveRealtime);
+        }
+      })
+      .catch((e) => console.error('Fetch stream mode error:', e));
+  }, []);
+
+  const handleToggleLiveStream = async () => {
+    const nextMode = !liveRealtime;
+    setLiveRealtime(nextMode);
+    try {
+      const res = await toggleStreamMode(nextMode);
+      if (res && res.success && typeof res.liveRealtime === 'boolean') {
+        setLiveRealtime(res.liveRealtime);
+      }
+    } catch (err) {
+      console.error('Error toggling stream mode:', err);
+    }
+  };
 
   // Fast API Fetching from Node.js Express Backend
   const loadDashboardData = useCallback(async (isSilent = false) => {
@@ -180,6 +207,8 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         refreshInterval={refreshInterval}
         setRefreshInterval={setRefreshInterval}
+        liveRealtime={liveRealtime}
+        onToggleLiveStream={handleToggleLiveStream}
       />
 
       {/* Main Content Container */}
@@ -227,9 +256,13 @@ export default function App() {
                 <div>
                   <div className="flex items-center space-x-2">
                     <h2 className="text-sm font-bold text-slate-100">ESP32 Sensor Station #TD3</h2>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center space-x-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span>Express Backend Live</span>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center space-x-1.5 ${
+                      liveRealtime
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${liveRealtime ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
+                      <span>{liveRealtime ? 'Live Stream ON: Dữ liệu thật Google Sheet' : 'Live Stream OFF: Dữ liệu mô phỏng giả định'}</span>
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">

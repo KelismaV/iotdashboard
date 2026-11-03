@@ -293,7 +293,7 @@ export default function DashboardCharts({ data, thresholds }) {
                 <Area 
                   type="monotone" 
                   dataKey="mq2" 
-                  name="MQ2 (Khói/LPG)" 
+                  name="MQ2" 
                   stroke="#f43f5e" 
                   strokeWidth={2} 
                   fill="url(#mq2Grad)" 
@@ -302,7 +302,7 @@ export default function DashboardCharts({ data, thresholds }) {
                 <Line 
                   type="monotone" 
                   dataKey="mq3" 
-                  name="MQ3 (Cồn)" 
+                  name="MQ3" 
                   stroke="#a855f7" 
                   strokeWidth={2} 
                   dot={false} 
@@ -311,7 +311,7 @@ export default function DashboardCharts({ data, thresholds }) {
                 <Line 
                   type="monotone" 
                   dataKey="mq4" 
-                  name="MQ4 (Methane)" 
+                  name="MQ4" 
                   stroke="#10b981" 
                   strokeWidth={2} 
                   dot={false} 
@@ -330,9 +330,9 @@ export default function DashboardCharts({ data, thresholds }) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-100">
-                Chỉ Số Gộp Gas Index
+                Gas Index
               </h3>
-              <p className="text-xs text-slate-400">Hợp nhất từ MQ2, MQ3 & MQ4</p>
+              <p className="text-xs text-slate-400">Chỉ số đánh giá mức độ ô nhiễm tổng thể</p>
             </div>
           </div>
 

@@ -47,9 +47,9 @@ export default function DataTable({ data }) {
       'Trạng Thái': d.status,
       'Nhiệt Độ (°C)': d.temp,
       'Độ Ẩm (%)': d.humidity,
-      'Khí MQ2 (Khói/LPG)': d.mq2,
-      'Khí MQ3 (Cồn)': d.mq3,
-      'Khí MQ4 (Methane)': d.mq4,
+      'Khí MQ2': d.mq2,
+      'Khí MQ3': d.mq3,
+      'Khí MQ4': d.mq4,
     }));
 
     const csv = Papa.unparse(exportRows);
@@ -129,9 +129,9 @@ export default function DataTable({ data }) {
               <th className="px-3 py-3">Ngày & Giờ</th>
               <th className="px-3 py-3">Nhiệt Độ (°C)</th>
               <th className="px-3 py-3">Độ Ẩm (%)</th>
-              <th className="px-3 py-3">MQ2 (Khói)</th>
-              <th className="px-3 py-3">MQ3 (Cồn)</th>
-              <th className="px-3 py-3">MQ4 (Methane)</th>
+              <th className="px-3 py-3">MQ2</th>
+              <th className="px-3 py-3">MQ3</th>
+              <th className="px-3 py-3">MQ4</th>
               <th className="px-3 py-3">Gas Index</th>
               <th className="px-3 py-3">% Biến Thiên</th>
               <th className="px-3 py-3">Level Hiện Tại</th>

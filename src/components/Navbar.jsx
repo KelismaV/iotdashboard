@@ -8,7 +8,8 @@ import {
   ShieldAlert, 
   Table, 
   TrendingUp,
-  Clock
+  Clock,
+  Zap
 } from 'lucide-react';
 
 export default function Navbar({
@@ -20,7 +21,9 @@ export default function Navbar({
   onManualRefresh,
   onOpenSettings,
   refreshInterval,
-  setRefreshInterval
+  setRefreshInterval,
+  liveRealtime = true,
+  onToggleLiveStream
 }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard Tổng Quan', icon: BarChart2 },
@@ -77,7 +80,30 @@ export default function Navbar({
           </nav>
 
           {/* Right Section: Real-time Status & Actions */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+
+            {/* Live Stream Inverted Switch: ON = Real (Default), OFF = Simulated */}
+            <button
+              onClick={onToggleLiveStream}
+              title={
+                liveRealtime
+                  ? 'Live Stream ON: Đang nhận dữ liệu THỰC TẾ từ Google Sheet (Mặc định). Bấm để chuyển sang dữ liệu Giả định.'
+                  : 'Live Stream OFF: Đang chạy dữ liệu GIẢ ĐỊNH / MÔ PHỎNG. Bấm để bật lại dữ liệu Thực tế.'
+              }
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                liveRealtime
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-sm shadow-emerald-500/10'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20 shadow-sm shadow-amber-500/10'
+              }`}
+            >
+              <Zap className={`w-3.5 h-3.5 ${liveRealtime ? 'fill-emerald-400 animate-pulse text-emerald-400' : 'text-amber-400'}`} />
+              <span className="hidden sm:inline">
+                {liveRealtime ? 'Live: ON (Real)' : 'Live: OFF (Giả định)'}
+              </span>
+              <span className="sm:hidden font-bold">
+                {liveRealtime ? 'REAL' : 'MÔ PHỎNG'}
+              </span>
+            </button>
 
             {/* Connection Indicator */}
             <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-lg glass-card text-xs">

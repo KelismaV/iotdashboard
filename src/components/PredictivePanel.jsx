@@ -101,7 +101,7 @@ export default function PredictivePanel({ data }) {
         {/* Card 2: Gas Index Current */}
         <div className="glass-panel p-5 rounded-2xl border border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-400">Chỉ Số Gộp Gas Index</span>
+            <span className="text-xs font-semibold text-slate-400">Gas Index</span>
             <span className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
               <BrainCircuit className="w-4 h-4" />
             </span>
@@ -113,7 +113,7 @@ export default function PredictivePanel({ data }) {
             <span className="text-xs text-slate-400">Index</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
-            Tổng hợp dữ liệu đồng thời từ các cảm biến MQ2, MQ3 & MQ4.
+            Tổng hợp dữ liệu từ các cảm biến MQ.
           </p>
         </div>
 

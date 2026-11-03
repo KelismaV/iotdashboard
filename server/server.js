@@ -45,6 +45,7 @@ let state = {
   sseClients: [],
   isSyncing: false,
   lastCheckTime: Date.now(),
+  isLiveRealtime: true, // Mặc định ON: Nhận dữ liệu REAL từ Google Sheets
 };
 
 // Initial seed from Google Sheets if database is new
@@ -109,6 +110,7 @@ function parseDateTime(dateStr, timeStr) {
  * Delta Sync Worker: Checks Google Sheets for new rows appended by pre-flashed ESP32
  */
 async function syncNewRowsFromGoogleSheets() {
+  if (!state.isLiveRealtime) return; // Khi Live Stream OFF: tạm dừng sync Google Sheet để nhường cho dữ liệu mô phỏng
   if (state.isSyncing && Date.now() - state.lastCheckTime < 10000) return;
   state.isSyncing = true;
   state.lastCheckTime = Date.now();
@@ -221,8 +223,62 @@ async function syncNewRowsFromGoogleSheets() {
   }
 }
 
-// Check Google Sheets for new rows every 4 seconds
+// Check Google Sheets for new rows every 4 seconds (Real-time live mode)
 setInterval(syncNewRowsFromGoogleSheets, 4000);
+
+/**
+ * Simulated Reading Generator (Chỉ chạy khi Live Stream OFF)
+ * Dùng để demo biểu đồ realtime và tính năng khi không có phần cứng/Sheet không gửi dữ liệu
+ */
+function generateSimulatedReading() {
+  if (state.isLiveRealtime) return; // Nếu Live Stream ON (mặc định), chỉ dùng dữ liệu thực từ Google Sheet
+
+  const latest = getLatestRecord();
+  const now = new Date();
+
+  const baseTemp = latest ? latest.temp : 28.5;
+  const baseHum = latest ? latest.humidity : 65.0;
+  const baseMq2 = latest ? latest.mq2 : 120.0;
+  const baseMq3 = latest ? latest.mq3 : 90.0;
+  const baseMq4 = latest ? latest.mq4 : 15.0;
+
+  const temp = Math.max(15, Math.min(45, Math.round((baseTemp + (Math.random() - 0.49) * 0.4) * 10) / 10));
+  const hum = Math.max(30, Math.min(95, Math.round((baseHum + (Math.random() - 0.49) * 0.6) * 10) / 10));
+  const mq2 = Math.max(50, Math.min(600, Math.round((baseMq2 + (Math.random() - 0.49) * 4) * 10) / 10));
+  const mq3 = Math.max(30, Math.min(600, Math.round((baseMq3 + (Math.random() - 0.49) * 3) * 10) / 10));
+  const mq4 = Math.max(5, Math.min(300, Math.round((baseMq4 + (Math.random() - 0.49) * 2) * 10) / 10));
+
+  const gasIndex = Math.round((mq2 * 0.4 + mq3 * 0.35 + mq4 * 0.25) / 10) / 10;
+  const gasIndexPct = Math.round((gasIndex / 500) * 1000) / 10;
+  const currentLevel = gasIndex > 150 ? 'L3' : gasIndex > 80 ? 'L2' : gasIndex > 40 ? 'L1' : 'L0';
+  const predictedLevel = currentLevel;
+
+  const dateStr = now.toLocaleDateString('vi-VN');
+  const timeStr = now.toTimeString().split(' ')[0];
+
+  const record = insertLog({
+    dateObj: now,
+    date_str: dateStr,
+    time_str: timeStr,
+    status: 'Success',
+    temp,
+    humidity: hum,
+    mq2,
+    mq3,
+    mq4,
+    gas_index: gasIndex,
+    gas_index_pct: gasIndexPct,
+    predicted_gas_index: gasIndex,
+    current_level: currentLevel,
+    predicted_level: predictedLevel
+  });
+
+  const sseData = `data: ${JSON.stringify({ type: 'NEW_READING', record })}\n\n`;
+  state.sseClients.forEach(c => c.write(sseData));
+}
+
+// Chạy kiểm tra/sinh mẫu giả định mỗi 3 giây (sẽ tự động bỏ qua nếu Live Stream ON)
+setInterval(generateSimulatedReading, 3000);
 
 /* ==========================================================================
    REAL-TIME SERVER-SENT EVENTS (SSE) STREAM
@@ -374,6 +430,20 @@ app.get('/api/data', (req, res) => {
     success: true,
     ...paginated,
   });
+});
+
+// Stream mode routes: ON (realtime Google Sheet data) vs OFF (simulated demo data)
+app.get('/api/stream-mode', (req, res) => {
+  res.json({ success: true, liveRealtime: state.isLiveRealtime });
+});
+
+app.post('/api/stream-mode', (req, res) => {
+  const { liveRealtime } = req.body;
+  if (typeof liveRealtime === 'boolean') {
+    state.isLiveRealtime = liveRealtime;
+    console.log(`📡 [Stream Mode Switched]: Live Stream is now ${state.isLiveRealtime ? 'ON (Dữ liệu THẬT Google Sheet)' : 'OFF (Dữ liệu GIẢ ĐỊNH)'}`);
+  }
+  res.json({ success: true, liveRealtime: state.isLiveRealtime });
 });
 
 app.post('/api/settings', (req, res) => {
