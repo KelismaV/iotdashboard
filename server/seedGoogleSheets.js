@@ -1,7 +1,7 @@
 import Papa from 'papaparse';
 import { getCount, insertBatchLogs } from './db.js';
 
-const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1836015410';
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1149125247';
 
 function parseDateTime(dateStr, timeStr) {
   if (!dateStr) return null;

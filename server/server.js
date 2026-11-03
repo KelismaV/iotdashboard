@@ -24,7 +24,7 @@ let PORT = parseInt(process.env.PORT || '5000', 10);
 app.use(cors());
 app.use(express.json());
 
-const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1836015410';
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1XaTMz_J3cPVx9b0DdlHxyjla8XZpNcH8Zq_lRRYc9R4/gviz/tq?tqx=out:csv&gid=1149125247';
 
 let DEFAULT_THRESHOLDS = {
   tempHigh: 35.0,
