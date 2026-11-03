@@ -5,6 +5,7 @@ import {
   Flame, 
   Wine, 
   Wind, 
+  Activity,
   TrendingUp, 
   TrendingDown
 } from 'lucide-react';
@@ -19,23 +20,26 @@ export default function KPICards({ kpiData, thresholds }) {
       unit: '°C',
       data: kpiData.temp,
       icon: Thermometer,
-      warningLimit: thresholds.tempWarning,
-      criticalLimit: thresholds.tempHigh,
-      color: 'from-amber-500 to-orange-500',
-      textAccent: 'text-amber-400',
-      bgGlow: 'shadow-amber-500/10 border-amber-500/20',
+      iconBg: 'bg-amber-50 text-amber-600 border border-amber-100',
+      status: () => {
+        const val = kpiData.temp?.current ?? 0;
+        if (val >= thresholds.tempHigh) return { type: 'critical', text: 'Nhiệt độ cao' };
+        if (val >= thresholds.tempWarning) return { type: 'warning', text: 'Cảnh báo' };
+        return { type: 'normal', text: 'Bình thường' };
+      }
     },
     {
       id: 'humidity',
-      title: 'Độ ẩm',
+      title: 'Độ ẩm không khí',
       unit: '%',
       data: kpiData.humidity,
       icon: Droplets,
-      warningLimit: thresholds.humidityHigh,
-      criticalLimit: 90,
-      color: 'from-cyan-500 to-blue-500',
-      textAccent: 'text-cyan-400',
-      bgGlow: 'shadow-cyan-500/10 border-cyan-500/20',
+      iconBg: 'bg-blue-50 text-blue-600 border border-blue-100',
+      status: () => {
+        const val = kpiData.humidity?.current ?? 0;
+        if (val >= thresholds.humidityHigh) return { type: 'warning', text: 'Độ ẩm cao' };
+        return { type: 'normal', text: 'Bình thường' };
+      }
     },
     {
       id: 'mq2',
@@ -43,11 +47,13 @@ export default function KPICards({ kpiData, thresholds }) {
       unit: 'PPM',
       data: kpiData.mq2,
       icon: Flame,
-      warningLimit: thresholds.mq2Warning,
-      criticalLimit: thresholds.mq2Critical,
-      color: 'from-rose-500 to-red-600',
-      textAccent: 'text-rose-400',
-      bgGlow: 'shadow-rose-500/10 border-rose-500/20',
+      iconBg: 'bg-rose-50 text-rose-600 border border-rose-100',
+      status: () => {
+        const val = kpiData.mq2?.current ?? 0;
+        if (val >= thresholds.mq2Critical) return { type: 'critical', text: 'Nguy hiểm' };
+        if (val >= thresholds.mq2Warning) return { type: 'warning', text: 'Cảnh báo' };
+        return { type: 'normal', text: 'An toàn' };
+      }
     },
     {
       id: 'mq3',
@@ -55,11 +61,13 @@ export default function KPICards({ kpiData, thresholds }) {
       unit: 'PPM',
       data: kpiData.mq3,
       icon: Wine,
-      warningLimit: thresholds.mq3Warning,
-      criticalLimit: thresholds.mq3Critical,
-      color: 'from-purple-500 to-indigo-500',
-      textAccent: 'text-purple-400',
-      bgGlow: 'shadow-purple-500/10 border-purple-500/20',
+      iconBg: 'bg-purple-50 text-purple-600 border border-purple-100',
+      status: () => {
+        const val = kpiData.mq3?.current ?? 0;
+        if (val >= thresholds.mq3Critical) return { type: 'critical', text: 'Nguy hiểm' };
+        if (val >= thresholds.mq3Warning) return { type: 'warning', text: 'Cảnh báo' };
+        return { type: 'normal', text: 'An toàn' };
+      }
     },
     {
       id: 'mq4',
@@ -67,100 +75,98 @@ export default function KPICards({ kpiData, thresholds }) {
       unit: 'PPM',
       data: kpiData.mq4,
       icon: Wind,
-      warningLimit: thresholds.mq4Warning,
-      criticalLimit: thresholds.mq4Critical,
-      color: 'from-emerald-500 to-teal-500',
-      textAccent: 'text-emerald-400',
-      bgGlow: 'shadow-emerald-500/10 border-emerald-500/20',
+      iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+      status: () => {
+        const val = kpiData.mq4?.current ?? 0;
+        if (val >= thresholds.mq4Critical) return { type: 'critical', text: 'Nguy hiểm' };
+        if (val >= thresholds.mq4Warning) return { type: 'warning', text: 'Cảnh báo' };
+        return { type: 'normal', text: 'An toàn' };
+      }
     },
     {
       id: 'gas_index',
-      title: 'Gas Index',
+      title: 'Chỉ số Gas Index',
       unit: 'Idx',
       data: kpiData.gas_index || { current: 0, avg: 0, min: 0, max: 0, trend: 0 },
-      icon: Flame,
-      warningLimit: 0.5,
-      criticalLimit: 1.0,
-      color: 'from-blue-600 to-violet-600',
-      textAccent: 'text-violet-400',
-      bgGlow: 'shadow-violet-500/10 border-violet-500/20',
-      badgeOverride: kpiData.current_level || 'L0',
+      icon: Activity,
+      iconBg: 'bg-indigo-50 text-[#2563EB] border border-blue-100',
+      status: () => {
+        const lvl = kpiData.current_level || 'L0';
+        if (lvl === 'L3') return { type: 'critical', text: 'Cực nguy hại (L3)' };
+        if (lvl === 'L2') return { type: 'critical', text: 'Gây hại (L2)' };
+        if (lvl === 'L1') return { type: 'warning', text: 'Trung bình (L1)' };
+        return { type: 'normal', text: 'Bình thường (L0)' };
+      }
     },
   ];
 
-  const getStatusBadge = (card) => {
-    if (card.badgeOverride) {
-      const lvl = card.badgeOverride;
-      const isDangerous = lvl === 'L2' || lvl === 'L3';
-      const isWarning = lvl === 'L1';
-      return (
-        <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
-          isDangerous ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse' :
-          isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-          'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
-        }`}>
-          <span>Cấp độ {lvl}</span>
-        </span>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
       {cards.map((card) => {
         const Icon = card.icon;
-        const trend = card.data.trend;
+        const trend = card.data?.trend ?? 0;
         const isUp = trend >= 0;
+        const statusInfo = card.status();
+
+        const badgeClass =
+          statusInfo.type === 'critical'
+            ? 'badge-critical'
+            : statusInfo.type === 'warning'
+            ? 'badge-warning'
+            : 'badge-normal';
 
         return (
           <div
             key={card.id}
-            className={`glass-card p-4 rounded-2xl transition-all duration-300 hover:-translate-y-1 ${card.bgGlow}`}
+            className="card p-4 transition-all duration-150 hover:shadow-md flex flex-col justify-between"
           >
-            {/* Card Top */}
+            {/* Top row: Icon + Status Badge */}
             <div className="flex items-center justify-between mb-3">
-              <div className={`p-2 rounded-xl bg-gradient-to-br ${card.color} text-white shadow-md`}>
-                <Icon className="w-4 h-4" />
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                <Icon className="w-5 h-5" />
               </div>
-              {getStatusBadge(card)}
+              <span className={badgeClass}>
+                {statusInfo.text}
+              </span>
             </div>
 
             {/* Title */}
-            <h3 className="text-xs font-medium text-slate-400 mb-1 truncate" title={card.title}>
-              {card.title}
-            </h3>
+            <div>
+              <h3 className="text-xs font-medium text-[#64748B] mb-1 truncate" title={card.title}>
+                {card.title}
+              </h3>
 
-            {/* Current Main Value */}
-            <div className="flex items-baseline space-x-1.5 mb-3">
-              <span className="text-2xl font-extrabold tracking-tight text-white">
-                {card.data.current}
-              </span>
-              <span className="text-xs font-semibold text-slate-400">{card.unit}</span>
-            </div>
-
-            {/* Trend & Sub Stats */}
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <div className="flex items-center space-x-1">
-                {isUp ? (
-                  <TrendingUp className="w-3 h-3 text-emerald-400" />
-                ) : (
-                  <TrendingDown className="w-3 h-3 text-rose-400" />
-                )}
-                <span className={isUp ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
-                  {isUp ? `+${trend}%` : `${trend}%`}
+              {/* Main Reading Value */}
+              <div className="flex items-baseline space-x-1 mb-3">
+                <span className="text-2xl font-bold tracking-tight text-[#202B36]">
+                  {card.data?.current ?? '--'}
                 </span>
-              </div>
-
-              <div className="text-[10px] text-slate-400">
-                TB: <span className="font-semibold text-slate-300">{card.data.avg}</span>
+                <span className="text-xs font-semibold text-[#64748B]">{card.unit}</span>
               </div>
             </div>
 
-            {/* Min / Max Range line */}
-            <div className="mt-2 text-[10px] text-slate-400 flex justify-between">
-              <span>Min: {card.data.min}</span>
-              <span>Max: {card.data.max}</span>
+            {/* Footer: Trend & Min/Max */}
+            <div className="pt-2.5 border-t border-[#E2E8F0] space-y-1 text-[11px] text-[#64748B]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1 font-medium">
+                  {isUp ? (
+                    <TrendingUp className="w-3.5 h-3.5 text-[#16A36A]" />
+                  ) : (
+                    <TrendingDown className="w-3.5 h-3.5 text-[#DC4545]" />
+                  )}
+                  <span className={isUp ? 'text-[#16A36A]' : 'text-[#DC4545]'}>
+                    {isUp ? `+${trend}%` : `${trend}%`}
+                  </span>
+                </div>
+                <div>
+                  TB: <strong className="text-[#202B36] font-semibold">{card.data?.avg ?? 0}</strong>
+                </div>
+              </div>
+
+              <div className="flex justify-between text-[10px] text-[#94A3B8]">
+                <span>Min: {card.data?.min ?? 0}</span>
+                <span>Max: {card.data?.max ?? 0}</span>
+              </div>
             </div>
           </div>
         );

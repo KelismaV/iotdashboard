@@ -19,6 +19,7 @@ export default function DataTable({ data }) {
         searchTerm === '' ||
         (item.formattedDate && item.formattedDate.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.formattedTime && item.formattedTime.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.formattedDateTime && item.formattedDateTime.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.status && item.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.current_level && item.current_level.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -50,10 +51,14 @@ export default function DataTable({ data }) {
       'Khí MQ2': d.mq2,
       'Khí MQ3': d.mq3,
       'Khí MQ4': d.mq4,
+      'Gas Index': d.gas_index,
+      '% Biến Thiên': d.gas_index_pct,
+      'Level Hiện Tại': d.current_level,
+      'Level Dự Báo': d.predicted_level,
     }));
 
     const csv = Papa.unparse(exportRows);
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' }); // UTF-8 BOM
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -63,20 +68,29 @@ export default function DataTable({ data }) {
     document.body.removeChild(link);
   };
 
+  const getBadgeForLevel = (lvl) => {
+    if (lvl === 'L3' || lvl === 'L2') return 'badge-critical';
+    if (lvl === 'L1') return 'badge-warning';
+    return 'badge-normal';
+  };
+
   return (
-    <div className="glass-panel p-6 rounded-2xl border border-slate-800 mb-6 space-y-4">
+    <div className="card p-6 mb-6 space-y-4">
       
       {/* Table Header Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-          <span>Bảng Nhật Ký Đọc Cảm Biến ({filteredData.length} bản ghi)</span>
-        </h3>
+        <div>
+          <h3 className="text-sm font-bold text-[#202B36]">
+            Bảng nhật ký đọc cảm biến
+          </h3>
+          <p className="text-xs text-[#64748B]">Tổng cộng {filteredData.length} bản ghi phù hợp bộ lọc</p>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-[#64748B] absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Tìm ngày, giờ..."
@@ -85,33 +99,33 @@ export default function DataTable({ data }) {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-slate-900/80 text-xs text-slate-200 pl-9 pr-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-cyan-500/50 w-44"
+              className="bg-white text-xs text-[#202B36] placeholder-[#94A3B8] pl-8 pr-3 py-1.5 rounded-lg border border-[#E2E8F0] focus:outline-none focus:border-[#2563EB] w-40 sm:w-48"
             />
           </div>
 
           {/* Status/Level Filter Dropdown */}
-          <div className="flex items-center space-x-1.5 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
-            <Filter className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="flex items-center space-x-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-[#E2E8F0]">
+            <Filter className="w-3.5 h-3.5 text-[#2563EB]" />
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs text-[#202B36] font-medium focus:outline-none cursor-pointer"
             >
-              <option value="ALL" className="bg-slate-900 text-slate-200">Tất cả Cấp độ</option>
-              <option value="L0" className="bg-slate-900 text-emerald-400">Level L0 (Bình thường)</option>
-              <option value="L1" className="bg-slate-900 text-amber-400">Level L1 (Chú ý)</option>
-              <option value="L2" className="bg-slate-900 text-rose-400">Level L2 (Cảnh báo)</option>
-              <option value="L3" className="bg-slate-900 text-rose-500 font-bold">Level L3 (Nguy hiểm)</option>
+              <option value="ALL">Tất cả Cấp độ</option>
+              <option value="L0">Level L0 (Bình thường)</option>
+              <option value="L1">Level L1 (Chú ý)</option>
+              <option value="L2">Level L2 (Cảnh báo)</option>
+              <option value="L3">Level L3 (Nguy hiểm)</option>
             </select>
           </div>
 
           {/* Export CSV Button */}
           <button
             onClick={handleExportCSV}
-            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold transition-all"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-[#2563EB] text-[#2563EB] hover:bg-blue-50 text-xs font-semibold transition"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Xuất CSV</span>
@@ -121,9 +135,9 @@ export default function DataTable({ data }) {
       </div>
 
       {/* Table Content */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
-        <table className="w-full text-left text-xs text-slate-300">
-          <thead className="bg-slate-900/90 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+      <div className="overflow-x-auto rounded-lg border border-[#E2E8F0]">
+        <table className="w-full text-left text-xs text-[#202B36]">
+          <thead className="bg-[#F8FAFC] text-[#64748B] uppercase font-semibold text-[10px] tracking-wider border-b border-[#E2E8F0]">
             <tr>
               <th className="px-3 py-3">STT</th>
               <th className="px-3 py-3">Ngày & Giờ</th>
@@ -138,32 +152,32 @@ export default function DataTable({ data }) {
               <th className="px-3 py-3">Level Dự Báo</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 bg-slate-950/40">
+          <tbody className="divide-y divide-[#E2E8F0] bg-white">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={11} className="px-4 py-8 text-center text-[#64748B]">
                   Không tìm thấy bản ghi nào phù hợp.
                 </td>
               </tr>
             ) : (
               paginatedData.map((item, index) => (
-                <tr key={item.id || index} className="hover:bg-slate-900/60 transition-colors">
-                  <td className="px-3 py-2.5 font-mono text-slate-500">#{item.id}</td>
-                  <td className="px-3 py-2.5 font-medium text-slate-200">{item.formattedDateTime}</td>
-                  <td className="px-3 py-2.5 font-semibold text-amber-400">{item.temp}°C</td>
-                  <td className="px-3 py-2.5 font-semibold text-cyan-400">{item.humidity}%</td>
-                  <td className="px-3 py-2.5 font-mono text-rose-300">{item.mq2}</td>
-                  <td className="px-3 py-2.5 font-mono text-purple-300">{item.mq3}</td>
-                  <td className="px-3 py-2.5 font-mono text-emerald-300">{item.mq4}</td>
-                  <td className="px-3 py-2.5 font-bold text-indigo-400">{item.gas_index || 0}</td>
-                  <td className="px-3 py-2.5 font-mono text-violet-300">{item.gas_index_pct || 0}%</td>
+                <tr key={item.id || index} className="hover:bg-[#F8FAFC] transition-colors">
+                  <td className="px-3 py-2.5 font-mono text-[#64748B]">#{item.id}</td>
+                  <td className="px-3 py-2.5 font-medium text-[#202B36]">{item.formattedDateTime}</td>
+                  <td className="px-3 py-2.5 font-semibold text-[#D99018]">{item.temp}°C</td>
+                  <td className="px-3 py-2.5 font-semibold text-[#2563EB]">{item.humidity}%</td>
+                  <td className="px-3 py-2.5 font-mono text-[#DC4545]">{item.mq2}</td>
+                  <td className="px-3 py-2.5 font-mono text-[#8B5CF6]">{item.mq3}</td>
+                  <td className="px-3 py-2.5 font-mono text-[#16A36A]">{item.mq4}</td>
+                  <td className="px-3 py-2.5 font-bold text-[#2563EB]">{item.gas_index || 0}</td>
+                  <td className="px-3 py-2.5 font-mono text-[#64748B]">{item.gas_index_pct || 0}%</td>
                   <td className="px-3 py-2.5">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    <span className={getBadgeForLevel(item.current_level || 'L0')}>
                       {item.current_level || 'L0'}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                    <span className={getBadgeForLevel(item.predicted_level || 'L0')}>
                       {item.predicted_level || 'L0'}
                     </span>
                   </td>
@@ -175,16 +189,16 @@ export default function DataTable({ data }) {
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 pt-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B] pt-2">
         <div className="flex items-center space-x-2">
-          <span>Hiển thị:</span>
+          <span>Hiển thị mỗi trang:</span>
           <select
             value={pageSize}
             onChange={(e) => {
               setPageSize(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="bg-slate-900 text-slate-200 px-2 py-1 rounded-lg border border-slate-800 focus:outline-none"
+            className="bg-white text-[#202B36] px-2.5 py-1 rounded-md border border-[#E2E8F0] focus:outline-none"
           >
             <option value={10}>10 dòng</option>
             <option value={15}>15 dòng</option>
@@ -197,17 +211,17 @@ export default function DataTable({ data }) {
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="p-1.5 rounded-lg glass-card hover:text-cyan-400 disabled:opacity-30 disabled:hover:text-slate-400"
+            className="p-1.5 rounded-md bg-white border border-[#E2E8F0] hover:text-[#2563EB] hover:bg-slate-50 disabled:opacity-40 transition"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span>
-            Trang <strong className="text-slate-200">{currentPage}</strong> / {totalPages}
+            Trang <strong className="text-[#202B36]">{currentPage}</strong> / {totalPages}
           </span>
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="p-1.5 rounded-lg glass-card hover:text-cyan-400 disabled:opacity-30 disabled:hover:text-slate-400"
+            className="p-1.5 rounded-md bg-white border border-[#E2E8F0] hover:text-[#2563EB] hover:bg-slate-50 disabled:opacity-40 transition"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

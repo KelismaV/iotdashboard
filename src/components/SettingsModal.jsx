@@ -51,65 +51,68 @@ export default function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="glass-panel w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white w-full max-w-lg rounded-xl border border-[#E2E8F0] shadow-2xl p-6 relative">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+        <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0] mb-5">
           <div className="flex items-center space-x-2">
-            <Sliders className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-base font-bold text-slate-100">Cấu Hình Nguồn Dữ Liệu & Cảnh Báo</h3>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2563EB] flex items-center justify-center">
+              <Sliders className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#202B36]">Cấu hình Nguồn Dữ Liệu & Ngưỡng Cảnh Báo</h3>
+              <p className="text-xs text-[#64748B]">Tùy chỉnh thông số vận hành trạm ESP32</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1 rounded-lg text-[#64748B] hover:text-[#202B36] hover:bg-slate-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="space-y-4 text-xs text-slate-300">
+        <div className="space-y-4 text-xs text-[#202B36]">
           
           {/* Status Alert */}
           {statusMsg && (
-            <div className={`p-3 rounded-xl border flex items-center space-x-2 ${
-              statusMsg.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-            }`}>
+            <div className="p-3 rounded-lg border bg-emerald-50 border-emerald-200 text-[#16A36A] flex items-center space-x-2">
               <CheckCircle className="w-4 h-4" />
-              <span>{statusMsg.text}</span>
+              <span className="font-medium">{statusMsg.text}</span>
             </div>
           )}
 
           {/* Google Sheet URL section */}
           <div>
-            <label className="block font-semibold mb-1 text-slate-200 flex items-center space-x-1">
-              <Link className="w-3.5 h-3.5 text-cyan-400" />
+            <label className="block font-semibold mb-1 text-[#202B36] flex items-center space-x-1">
+              <Link className="w-3.5 h-3.5 text-[#2563EB]" />
               <span>Google Sheet URL (Link chia sẻ công khai):</span>
             </label>
             <input
               type="text"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              className="w-full bg-slate-900/90 text-slate-200 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 font-mono text-[11px]"
+              className="w-full bg-white text-[#202B36] p-2.5 rounded-lg border border-[#E2E8F0] focus:outline-none focus:border-[#2563EB] font-mono text-xs"
               placeholder="https://docs.google.com/spreadsheets/d/.../edit"
             />
-            <p className="text-[10px] text-slate-400 mt-1">
-              Hệ thống tự động chuyển đổi sang URL xuất CSV real-time.
+            <p className="text-[11px] text-[#64748B] mt-1">
+              Hệ thống tự động chuyển đổi sang endpoint CSV real-time.
             </p>
           </div>
 
           {/* Threshold sliders */}
-          <div className="pt-3 border-t border-slate-800 space-y-3">
-            <h4 className="font-bold text-slate-200 uppercase tracking-wider text-[10px]">
-              Cài Đặt Ngưỡng Cảnh Báo An Toàn:
+          <div className="pt-3 border-t border-[#E2E8F0] space-y-3">
+            <h4 className="font-bold text-[#202B36] uppercase tracking-wider text-[11px]">
+              Cài đặt ngưỡng cảnh báo an toàn:
             </h4>
 
             {/* Temp Limit */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span>Ngưỡng Nhiệt Độ Cao (°C):</span>
-                <strong className="text-amber-400 font-mono">{tempThresh}°C</strong>
+            <div className="bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
+              <div className="flex justify-between mb-1.5 text-xs">
+                <span className="font-medium text-[#202B36]">Ngưỡng Nhiệt Độ Cao (°C):</span>
+                <strong className="text-[#D99018] font-bold">{tempThresh}°C</strong>
               </div>
               <input
                 type="range"
@@ -118,15 +121,15 @@ export default function SettingsModal({
                 step="0.5"
                 value={tempThresh}
                 onChange={(e) => setTempThresh(e.target.value)}
-                className="w-full accent-amber-500 cursor-pointer"
+                className="w-full accent-[#D99018] cursor-pointer"
               />
             </div>
 
             {/* MQ2 Limit */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span>Ngưỡng MQ2 (PPM):</span>
-                <strong className="text-rose-400 font-mono">{mq2Thresh} PPM</strong>
+            <div className="bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
+              <div className="flex justify-between mb-1.5 text-xs">
+                <span className="font-medium text-[#202B36]">Ngưỡng Khí MQ2 (PPM):</span>
+                <strong className="text-[#DC4545] font-bold">{mq2Thresh} PPM</strong>
               </div>
               <input
                 type="range"
@@ -135,15 +138,15 @@ export default function SettingsModal({
                 step="10"
                 value={mq2Thresh}
                 onChange={(e) => setMq2Thresh(e.target.value)}
-                className="w-full accent-rose-500 cursor-pointer"
+                className="w-full accent-[#DC4545] cursor-pointer"
               />
             </div>
 
             {/* MQ3 Limit */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span>Ngưỡng MQ3 (PPM):</span>
-                <strong className="text-purple-400 font-mono">{mq3Thresh} PPM</strong>
+            <div className="bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
+              <div className="flex justify-between mb-1.5 text-xs">
+                <span className="font-medium text-[#202B36]">Ngưỡng Khí MQ3 (PPM):</span>
+                <strong className="text-[#8B5CF6] font-bold">{mq3Thresh} PPM</strong>
               </div>
               <input
                 type="range"
@@ -152,15 +155,15 @@ export default function SettingsModal({
                 step="10"
                 value={mq3Thresh}
                 onChange={(e) => setMq3Thresh(e.target.value)}
-                className="w-full accent-purple-500 cursor-pointer"
+                className="w-full accent-[#8B5CF6] cursor-pointer"
               />
             </div>
 
             {/* MQ4 Limit */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span>Ngưỡng MQ4 (PPM):</span>
-                <strong className="text-emerald-400 font-mono">{mq4Thresh} PPM</strong>
+            <div className="bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
+              <div className="flex justify-between mb-1.5 text-xs">
+                <span className="font-medium text-[#202B36]">Ngưỡng Khí MQ4 (PPM):</span>
+                <strong className="text-[#16A36A] font-bold">{mq4Thresh} PPM</strong>
               </div>
               <input
                 type="range"
@@ -169,7 +172,7 @@ export default function SettingsModal({
                 step="5"
                 value={mq4Thresh}
                 onChange={(e) => setMq4Thresh(e.target.value)}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full accent-[#16A36A] cursor-pointer"
               />
             </div>
           </div>
@@ -177,23 +180,23 @@ export default function SettingsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-slate-800 mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-[#E2E8F0] mt-6">
           <div className="flex items-center space-x-3">
             <button
               onClick={handleResetDefault}
-              className="text-xs text-slate-400 hover:text-slate-200 underline"
+              className="text-xs text-[#64748B] hover:text-[#202B36] underline"
             >
               Khôi phục mặc định
             </button>
             {onClearDatabase && (
               <button
                 onClick={async () => {
-                  if (window.confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu mẫu cũ để bắt đầu dữ liệu thực từ Sheet mới?')) {
+                  if (window.confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu mẫu cũ để bắt đầu dữ liệu thực từ Google Sheet mới?')) {
                     await onClearDatabase();
-                    setStatusMsg({ type: 'success', text: 'Đã xóa toàn bộ dữ liệu mẫu! Sẵn sàng đón dữ liệu thực.' });
+                    setStatusMsg({ type: 'success', text: 'Đã xóa toàn bộ dữ liệu cũ! Sẵn sàng đón dữ liệu mới.' });
                   }
                 }}
-                className="flex items-center space-x-1 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2.5 py-1 rounded-lg border border-rose-500/30 transition"
+                className="flex items-center space-x-1 text-xs text-[#DC4545] hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-md border border-red-200 transition"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Xóa dữ liệu cũ</span>
@@ -204,13 +207,13 @@ export default function SettingsModal({
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+              className="px-4 py-2 rounded-lg bg-white border border-[#E2E8F0] text-[#64748B] hover:bg-slate-50 text-xs font-semibold transition"
             >
               Hủy
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 transition"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition"
             >
               <Save className="w-4 h-4" />
               <span>Lưu & Tải Lại</span>
