@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ShieldCheck, AlertTriangle, Wind, Bell, CheckCircle2, Clock } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Wind, Bell, CheckCircle2, Clock, Info } from 'lucide-react';
 
 export default function SafetyAlert({ data = [] }) {
   // Logic đánh giá cảnh báo an toàn: 3 lần liên tiếp đạt L2 hoặc L3
@@ -46,7 +46,7 @@ export default function SafetyAlert({ data = [] }) {
   }, [data]);
 
   const levelMap = {
-    'L0': { text: 'Bình thường (L0)', badge: 'badge-normal', barClass: 'bg-[#16A36A]' },
+    'L0': { text: 'An toàn (L0)', badge: 'badge-normal', barClass: 'bg-[#16A36A]' },
     'L1': { text: 'Trung bình (L1)', badge: 'badge-warning', barClass: 'bg-[#D99018]' },
     'L2': { text: 'Gây hại (L2)', badge: 'badge-critical', barClass: 'bg-[#EA580C]' },
     'L3': { text: 'Cực nguy hại (L3)', badge: 'badge-critical', barClass: 'bg-[#DC4545]' }
@@ -54,38 +54,75 @@ export default function SafetyAlert({ data = [] }) {
 
   const currentLevelInfo = levelMap[currentPred] || levelMap['L0'];
 
+  // Cấu hình linh hoạt 3 trạng thái của Box Cảnh Báo Chính
+  const getBannerConfig = () => {
+    if (isAlarming || currentPred === 'L2' || currentPred === 'L3') {
+      return {
+        borderClass: 'border-l-[#DC4545] bg-red-50/60',
+        iconBg: 'bg-red-100 text-[#DC4545]',
+        Icon: AlertTriangle,
+        iconAnimation: 'animate-bounce',
+        title: 'CẢNH BÁO: PHÁT HIỆN NGUY CƠ Ô NHIỄM KHÍ GAS (L2/L3)',
+        titleColor: 'text-[#DC4545]',
+        badgeText: 'BÁO ĐỘNG BẬT',
+        badgeClass: 'badge-critical',
+        desc: 'Mô hình phát hiện nồng độ khí vượt ngưỡng gây hại liên tiếp. Cần kích hoạt quạt thông gió hoặc kiểm tra chuồng nuôi ngay.',
+        statusText: '⚠️ Cần xử lý ngay'
+      };
+    }
+    if (currentPred === 'L1') {
+      return {
+        borderClass: 'border-l-[#D99018] bg-amber-50/60',
+        iconBg: 'bg-amber-100 text-[#D99018]',
+        Icon: Info,
+        iconAnimation: '',
+        title: 'MÔI TRƯỜNG TRUNG BÌNH (CẤP ĐỘ L1)',
+        titleColor: 'text-[#B45309]',
+        badgeText: 'THEO DÕI (L1)',
+        badgeClass: 'badge-warning',
+        desc: 'Nồng độ khí gas có phát sinh nhẹ do sinh hoạt phòng khám, hiện vẫn trong ngưỡng kiểm soát an toàn. Hệ thống đang tiếp tục giám sát.',
+        statusText: '👀 Đang theo dõi'
+      };
+    }
+    return {
+      borderClass: 'border-l-[#16A36A] bg-emerald-50/40',
+      iconBg: 'bg-emerald-100 text-[#16A36A]',
+      Icon: ShieldCheck,
+      iconAnimation: '',
+      title: 'MÔI TRƯỜNG AN TOÀN (CẤP ĐỘ L0)',
+      titleColor: 'text-[#16A36A]',
+      badgeText: 'AN TOÀN (L0)',
+      badgeClass: 'badge-normal',
+      desc: 'Tất cả các thông số khí Gas (MQ2, MQ3, MQ4) và vi khí hậu đều ở mức lý tưởng, không phát hiện mùi hôi độc hại.',
+      statusText: '✅ Giám sát liên tục'
+    };
+  };
+
+  const banner = getBannerConfig();
+  const BannerIcon = banner.Icon;
+
   return (
     <div className="space-y-6 mb-6">
       
-      {/* Box Cảnh Báo Chính */}
-      <div className={`card p-6 border-l-4 transition-all duration-300 ${
-        isAlarming 
-          ? 'border-l-[#DC4545] bg-red-50/60' 
-          : 'border-l-[#16A36A] bg-emerald-50/40'
-      }`}>
+      {/* Box Cảnh Báo Chính - 3 Mức Linh Hoạt (L0 - L1 - L2/L3) */}
+      <div className={`card p-6 border-l-4 transition-all duration-300 ${banner.borderClass}`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
-              isAlarming ? 'bg-red-100 text-[#DC4545]' : 'bg-emerald-100 text-[#16A36A]'
-            }`}>
-              {isAlarming ? <AlertTriangle className="w-6 h-6 animate-bounce" /> : <ShieldCheck className="w-6 h-6" />}
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${banner.iconBg}`}>
+              <BannerIcon className={`w-6 h-6 ${banner.iconAnimation}`} />
             </div>
             
             <div>
               <div className="flex items-center space-x-2">
-                <h2 id="alert-box" className={`text-base sm:text-lg font-bold uppercase tracking-wide ${
-                  isAlarming ? 'text-[#DC4545]' : 'text-[#16A36A]'
-                }`}>
-                  {isAlarming ? 'Cảnh báo: Ô nhiễm khí gas nghiêm trọng!' : 'Hệ thống an toàn - Môi trường bình thường'}
+                <h2 id="alert-box" className={`text-base sm:text-lg font-bold uppercase tracking-wide ${banner.titleColor}`}>
+                  {banner.title}
                 </h2>
-                <span className={isAlarming ? 'badge-critical' : 'badge-normal'}>
-                  {isAlarming ? 'BÁO ĐỘNG BẬT' : 'AN TOÀN'}
+                <span className={banner.badgeClass}>
+                  {banner.badgeText}
                 </span>
               </div>
               <p className="text-xs text-[#64748B] mt-1">
-                {isAlarming 
-                  ? 'Phát hiện nồng độ khí gas nguy hiểm liên tục 3 lần (45s). Hệ thống cảnh báo tự động đã kích hoạt.' 
-                  : 'Tất cả các thông số khí Gas (MQ2, MQ3, MQ4) và nhiệt ẩm đều nằm trong giới hạn an toàn cho phép.'}
+                {banner.desc}
               </p>
             </div>
           </div>
@@ -93,7 +130,7 @@ export default function SafetyAlert({ data = [] }) {
           <div className="text-right shrink-0">
             <p className="text-[11px] text-[#64748B]">Trạng thái hệ thống:</p>
             <span className="text-xs font-bold text-[#202B36]">
-              {isAlarming ? '⚠️ Cần kiểm tra ngay' : '✅ Giám sát liên tục'}
+              {banner.statusText}
             </span>
           </div>
         </div>
@@ -108,9 +145,9 @@ export default function SafetyAlert({ data = [] }) {
             </div>
             <div>
               <h3 className="text-xs sm:text-sm font-bold text-[#202B36]">
-                Dự báo chu kỳ 4 phút tới
+                Dự báo chu kỳ 3 phút tới (Mô hình MOLR t+6)
               </h3>
-              <p className="text-[11px] text-[#64748B]">Đánh giá theo thuật toán dự đoán AI Machine Learning</p>
+              <p className="text-[11px] text-[#64748B]">Ánh xạ ranh giới phân cụm K-Means kết hợp bộ lọc xác nhận Debounce (N=3)</p>
             </div>
           </div>
 
@@ -130,7 +167,7 @@ export default function SafetyAlert({ data = [] }) {
             <div className={`h-full flex-1 transition-all duration-300 ${currentPred === 'L3' ? 'bg-[#DC4545]' : 'bg-[#DC4545]/20'}`}></div>
           </div>
           <div className="flex justify-between text-[11px] font-semibold text-[#64748B] px-1">
-            <span className={`w-1/4 text-center ${currentPred === 'L0' ? 'text-[#16A36A] font-bold' : ''}`}>L0: Bình thường</span>
+            <span className={`w-1/4 text-center ${currentPred === 'L0' ? 'text-[#16A36A] font-bold' : ''}`}>L0: An toàn</span>
             <span className={`w-1/4 text-center ${currentPred === 'L1' ? 'text-[#D99018] font-bold' : ''}`}>L1: Trung bình</span>
             <span className={`w-1/4 text-center ${currentPred === 'L2' ? 'text-[#EA580C] font-bold' : ''}`}>L2: Gây hại</span>
             <span className={`w-1/4 text-center ${currentPred === 'L3' ? 'text-[#DC4545] font-bold' : ''}`}>L3: Cực nguy hại</span>
@@ -158,69 +195,42 @@ export default function SafetyAlert({ data = [] }) {
           <table className="w-full text-left text-xs text-[#202B36]">
             <thead className="bg-[#F8FAFC] text-[#64748B] font-semibold text-[11px] uppercase tracking-wider border-b border-[#E2E8F0]">
               <tr>
-                <th className="px-4 py-3">Thời gian</th>
-                <th className="px-4 py-3">Thiết bị / Cảm biến</th>
-                <th className="px-4 py-3">Sự kiện</th>
-                <th className="px-4 py-3">Mức độ cảnh báo</th>
-                <th className="px-4 py-3">Trạng thái xử lý</th>
+                <th className="py-2.5 px-3">Thời gian</th>
+                <th className="py-2.5 px-3">Thiết bị / Cảm biến</th>
+                <th className="py-2.5 px-3">Sự kiện</th>
+                <th className="py-2.5 px-3">Mức độ</th>
+                <th className="py-2.5 px-3">Trạng thái</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0] bg-white">
-              {/* Always show current alarm row if alarming */}
-              {isAlarming && (
-                <tr className="bg-red-50/70 hover:bg-red-50">
-                  <td className="px-4 py-3 font-medium text-[#DC4545] flex items-center space-x-1.5">
-                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                    <span>Hiện tại (Thời gian thực)</span>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-[#202B36]">ESP32 Station #TD3 (MQ2/MQ3/MQ4)</td>
-                  <td className="px-4 py-3 text-[#DC4545] font-bold">CẢNH BÁO LIÊN TỤC 3 LẦN VƯỢT NGƯỠNG NGUY HẠI</td>
-                  <td className="px-4 py-3">
-                    <span className="badge-critical font-bold">CỰC NGUY HẠI</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs font-semibold text-[#DC4545]">
-                    Đang kích hoạt còi cảnh báo
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {alarmEvents.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="py-8 text-center text-[#64748B] text-xs">
+                    <CheckCircle2 className="w-6 h-6 text-[#16A36A] mx-auto mb-1.5 opacity-60" />
+                    Chưa có sự kiện cảnh báo nào được ghi nhận trong ca trực này.
                   </td>
                 </tr>
-              )}
-
-              {/* Current Status Row */}
-              <tr className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-[#64748B]">Bản ghi hiện thời</td>
-                <td className="px-4 py-3 font-medium text-[#202B36]">ESP32 Station #TD3</td>
-                <td className="px-4 py-3 text-[#64748B]">Trạng thái giám sát khí gas chu kỳ hiện tại</td>
-                <td className="px-4 py-3">
-                  <span className={currentLevelInfo.badge}>{currentLevelInfo.text}</span>
-                </td>
-                <td className="px-4 py-3 text-xs text-[#16A36A] font-medium flex items-center space-x-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Hoạt động bình thường</span>
-                </td>
-              </tr>
-
-              {/* Historical abnormal events */}
-              {alarmEvents.length > 0 ? (
+              ) : (
                 alarmEvents.map((evt, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-[#64748B]">{evt.time}</td>
-                    <td className="px-4 py-3 font-medium text-[#202B36]">{evt.sensor}</td>
-                    <td className="px-4 py-3 text-[#202B36]">{evt.event}</td>
-                    <td className="px-4 py-3">
-                      <span className={
-                        evt.level === 'L3' || evt.level === 'L2' ? 'badge-critical' : 'badge-warning'
-                      }>
-                        Level {evt.level}
+                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-[#64748B] flex items-center space-x-1.5">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span>{evt.time}</span>
+                    </td>
+                    <td className="py-2.5 px-3 font-medium text-[#202B36]">{evt.sensor}</td>
+                    <td className="py-2.5 px-3 text-[#64748B]">{evt.event}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={levelMap[evt.level]?.badge || 'badge-normal'}>
+                        {evt.level === 'L3' ? 'Cực nguy hại (L3)' : evt.level === 'L2' ? 'Gây hại (L2)' : 'Trung bình (L1)'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[#64748B]">{evt.status}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={`text-[11px] font-semibold ${evt.status.includes('chuông') ? 'text-[#DC4545]' : 'text-[#64748B]'}`}>
+                        {evt.status}
+                      </span>
+                    </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-[#64748B]">
-                    Không có sự kiện vượt ngưỡng nào gần đây. Hệ thống duy trì mức an toàn.
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
