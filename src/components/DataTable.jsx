@@ -115,10 +115,10 @@ export default function DataTable({ data }) {
               className="bg-transparent text-xs text-[#202B36] font-medium focus:outline-none cursor-pointer"
             >
               <option value="ALL">Tất cả Cấp độ</option>
-              <option value="L0">Level L0 (Bình thường)</option>
-              <option value="L1">Level L1 (Chú ý)</option>
-              <option value="L2">Level L2 (Cảnh báo)</option>
-              <option value="L3">Level L3 (Nguy hiểm)</option>
+              <option value="L0">Mức L0 - An toàn</option>
+              <option value="L1">Mức L1 - Trung bình</option>
+              <option value="L2">Mức L2 - Cảnh báo</option>
+              <option value="L3">Mức L3 - Nguy hiểm</option>
             </select>
           </div>
 

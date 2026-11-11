@@ -46,10 +46,10 @@ export default function SafetyAlert({ data = [] }) {
   }, [data]);
 
   const levelMap = {
-    'L0': { text: 'An toàn (L0)', badge: 'badge-normal', barClass: 'bg-[#16A36A]' },
-    'L1': { text: 'Trung bình (L1)', badge: 'badge-warning', barClass: 'bg-[#D99018]' },
-    'L2': { text: 'Gây hại (L2)', badge: 'badge-critical', barClass: 'bg-[#EA580C]' },
-    'L3': { text: 'Cực nguy hại (L3)', badge: 'badge-critical', barClass: 'bg-[#DC4545]' }
+    'L0': { text: 'Mức L0 - An toàn', badge: 'badge-normal', barClass: 'bg-[#16A36A]' },
+    'L1': { text: 'Mức L1 - Trung bình', badge: 'badge-warning', barClass: 'bg-[#D99018]' },
+    'L2': { text: 'Mức L2 - Cảnh báo', badge: 'badge-critical', barClass: 'bg-[#EA580C]' },
+    'L3': { text: 'Mức L3 - Nguy hiểm', badge: 'badge-critical', barClass: 'bg-[#DC4545]' }
   };
 
   const currentLevelInfo = levelMap[currentPred] || levelMap['L0'];
@@ -62,11 +62,11 @@ export default function SafetyAlert({ data = [] }) {
         iconBg: 'bg-red-100 text-[#DC4545]',
         Icon: AlertTriangle,
         iconAnimation: 'animate-bounce',
-        title: 'CẢNH BÁO: PHÁT HIỆN NGUY CƠ Ô NHIỄM KHÍ GAS (L2/L3)',
+        title: 'CẢNH BÁO: PHÁT HIỆN NGUY CƠ Ô NHIỄM KHÍ GAS',
         titleColor: 'text-[#DC4545]',
         badgeText: 'BÁO ĐỘNG BẬT',
         badgeClass: 'badge-critical',
-        desc: 'Mô hình phát hiện nồng độ khí vượt ngưỡng gây hại liên tiếp. Cần kích hoạt quạt thông gió hoặc kiểm tra chuồng nuôi ngay.',
+        desc: 'Nồng độ khí gas vượt ngưỡng an toàn liên tiếp. Cần bật thông gió hoặc kiểm tra phòng khám ngay.',
         statusText: '⚠️ Cần xử lý ngay'
       };
     }
@@ -76,11 +76,11 @@ export default function SafetyAlert({ data = [] }) {
         iconBg: 'bg-amber-100 text-[#D99018]',
         Icon: Info,
         iconAnimation: '',
-        title: 'MÔI TRƯỜNG TRUNG BÌNH (CẤP ĐỘ L1)',
+        title: 'MÔI TRƯỜNG TRUNG BÌNH - CẤP ĐỘ L1',
         titleColor: 'text-[#B45309]',
-        badgeText: 'THEO DÕI (L1)',
+        badgeText: 'THEO DÕI L1',
         badgeClass: 'badge-warning',
-        desc: 'Nồng độ khí gas có phát sinh nhẹ do sinh hoạt phòng khám, hiện vẫn trong ngưỡng kiểm soát an toàn. Hệ thống đang tiếp tục giám sát.',
+        desc: 'Nồng độ khí gas tăng nhẹ, vẫn trong ngưỡng an toàn. Hệ thống đang tiếp tục theo dõi.',
         statusText: '👀 Đang theo dõi'
       };
     }
@@ -89,11 +89,11 @@ export default function SafetyAlert({ data = [] }) {
       iconBg: 'bg-emerald-100 text-[#16A36A]',
       Icon: ShieldCheck,
       iconAnimation: '',
-      title: 'MÔI TRƯỜNG AN TOÀN (CẤP ĐỘ L0)',
+      title: 'MÔI TRƯỜNG AN TOÀN - CẤP ĐỘ L0',
       titleColor: 'text-[#16A36A]',
-      badgeText: 'AN TOÀN (L0)',
+      badgeText: 'AN TOÀN L0',
       badgeClass: 'badge-normal',
-      desc: 'Tất cả các thông số khí Gas (MQ2, MQ3, MQ4) và vi khí hậu đều ở mức lý tưởng, không phát hiện mùi hôi độc hại.',
+      desc: 'Tất cả các thông số khí gas và nhiệt ẩm đều ở mức an toàn, không khí trong lành.',
       statusText: '✅ Giám sát liên tục'
     };
   };
