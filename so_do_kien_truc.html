@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Sơ đồ kiến trúc tổng thể hệ thống - IoT Monitoring Station</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F3F5F7; /* Main Web Background */
+      color: #202B36;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 30px;
+    }
+    
+    /* Main Canvas Card */
+    .dashboard-panel {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 32px;
+      width: 1160px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    /* Top Brand / Header */
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: #2563EB;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .brand-text h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #202B36;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .brand-text p {
+      font-size: 12px;
+      color: #64748B;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .panel-badges {
+      display: flex;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .badge-normal {
+      background: #ECFDF5;
+      color: #16A36A;
+      border-color: #A7F3D0;
+    }
+    .badge-navy {
+      background: #17212B;
+      color: #FFFFFF;
+    }
+
+    /* 4-Column Layout */
+    .flow-grid {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* Tier Column */
+    .tier-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      transition: all 0.2s ease;
+    }
+    .tier-col:hover {
+      border-color: #CBD5E1;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    /* Navy Sidebar Header on Tier 1 */
+    .tier-header {
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .tier-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .tier-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #202B36;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tier-sub {
+      font-size: 11px;
+      color: #64748B;
+      margin-top: 2px;
+    }
+
+    /* Tags Theme */
+    .tag-blue   { background: #EFF6FF; color: #2563EB; border: 1px solid #DBEAFE; }
+    .tag-green  { background: #ECFDF5; color: #16A36A; border: 1px solid #A7F3D0; }
+    .tag-purple { background: #FAF5FF; color: #8B5CF6; border: 1px solid #E9D5FF; }
+    .tag-navy   { background: #17212B; color: #FFFFFF; }
+
+    /* Module Cards inside Tiers */
+    .module-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+    .module-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .module-head {
+      font-size: 12px;
+      font-weight: 700;
+      color: #202B36;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .module-desc {
+      font-size: 11px;
+      color: #64748B;
+      line-height: 1.45;
+    }
+    .module-desc span.highlight {
+      color: #202B36;
+      font-weight: 600;
+    }
+    .code-pill {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 10px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #0F172A;
+      margin-top: 3px;
+    }
+
+    /* Modern Arrow Connectors */
+    .connector-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 48px;
+      position: relative;
+    }
+    .connector-line {
+      width: 100%;
+      height: 2px;
+      background: #2563EB;
+      position: relative;
+    }
+    .connector-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 6px solid #2563EB;
+    }
+    .connector-pill {
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #DBEAFE;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-bottom: 6px;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+
+    /* Footer Info */
+    .panel-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-panel">
+    
+    <!-- Header -->
+    <div class="panel-header">
+      <div class="brand-left">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <h1>SƠ ĐỒ KIẾN TRÚC TỔNG THỂ HỆ THỐNG IoT &amp; AI</h1>
+          <p>Trạm Giám Sát Chất Lượng Không Khí Phòng Khám Thú Y — ESP32 Station #TD3</p>
+        </div>
+      </div>
+      <div class="panel-badges">
+        <span class="badge badge-navy">Industrial IoT Design</span>
+        <span class="badge badge-normal">● Hệ thống Online 24/7</span>
+      </div>
+    </div>
+
+    <!-- 4 Tiers Flow -->
+    <div class="flow-grid">
+      
+      <!-- TIER 1: ESP32 Edge -->
+      <div class="tier-col">
+        <div class="tier-header">
+          <span class="tier-tag tag-navy">Tầng 1: Biên (Edge AI)</span>
+          <div class="tier-title">📡 Trạm Đo ESP32</div>
+          <div class="tier-sub">Thu thập &amp; Tiền xử lý tại biên</div>
+        </div>
+        <div class="module-stack">
+          <div class="module-box">
+            <div class="module-head">Cụm Cảm Biến Khí &amp; Vi Khí Hậu</div>
+            <div class="module-desc">
+              • <span class="highlight">MQ-2:</span> Khói, LPG, Khí gas<br>
+              • <span class="highlight">MQ-3:</span> Hơi cồn, Dung dịch sát khuẩn<br>
+              • <span class="highlight">MQ-4:</span> Methane (CH₄), Mùi phân<br>
+              • <span class="highlight">DHT11/22:</span> Nhiệt độ &amp; Độ ẩm
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">ESP32 Core 1 (Xử Lý AI)</div>
+            <div class="module-desc">
+              • <span class="highlight">Lọc trung vị:</span> N = 6 mẫu<br>
+              • <span class="highlight">Early Fusion:</span> Gas Index [0.0–1.0]<br>
+              • <span class="highlight">Mô hình MOLR (SGD):</span> Dự báo t+6<br>
+              • <span class="highlight">K-Means:</span> Phân 4 cấp rủi ro L0–L3<br>
+              • <span class="highlight">Debounce:</span> N = 3 chống rung
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">ESP32 Core 0 (Truyền Thông)</div>
+            <div class="module-desc">
+              • Quản lý kết nối Wi-Fi 2.4GHz<br>
+              • Đóng gói JSON &amp; HTTPS Client
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector 1 -> 2 -->
+      <div class="connector-box">
+        <div class="connector-pill">HTTPS<br>15-20s</div>
+        <div class="connector-line"></div>
+      </div>
+
+      <!-- TIER 2: Google Sheets Cloud -->
+      <div class="tier-col">
+        <div class="tier-header">
+          <span class="tier-tag tag-green">Tầng 2: Đám Mây</span>
+          <div class="tier-title">☁️ Google Sheets Cloud</div>
+          <div class="tier-sub">Kho lưu trữ gốc (Source of Truth)</div>
+        </div>
+        <div class="module-stack">
+          <div class="module-box">
+            <div class="module-head">Google Apps Script Webhook</div>
+            <div class="module-desc">
+              • Tiếp nhận request HTTPS an toàn<br>
+              • Ghi hàng loạt log dữ liệu thời gian thực
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">Phân Trang Đa Tháng</div>
+            <div class="module-desc">
+              • <span class="highlight">Tab 2026_09:</span> 60.294 bản ghi<br>
+              • <span class="highlight">Tab 2026_10:</span> 1.068 bản ghi<br>
+              • <span class="highlight">Tab 2026_11:</span> Dữ liệu hiện tại<br>
+              • Tự sinh trang theo chu kỳ tháng
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">Dịch Vụ Xuất CSV Trực Tuyến</div>
+            <div class="module-desc">
+              • Cung cấp API tải chuỗi CSV thô<br>
+              • Không làm nghẽn lưu lượng phần cứng
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector 2 -> 3 -->
+      <div class="connector-box">
+        <div class="connector-pill">Auto Sync<br>Chu kỳ 4s</div>
+        <div class="connector-line"></div>
+      </div>
+
+      <!-- TIER 3: Node.js & SQLite -->
+      <div class="tier-col">
+        <div class="tier-header">
+          <span class="tier-tag tag-blue">Tầng 3: Máy Chủ (Backend)</span>
+          <div class="tier-title">⚙️ Node.js Express &amp; DB</div>
+          <div class="tier-sub">Xử lý trung tâm &amp; Lưu trữ cục bộ</div>
+        </div>
+        <div class="module-stack">
+          <div class="module-box">
+            <div class="module-head">Thuật Toán Auto Tab &amp; Bù Ngày</div>
+            <div class="module-desc">
+              • <span class="highlight">Auto Tab:</span> Tự quét GID tháng mới<br>
+              • <span class="highlight">Forward-Fill:</span> Bù ngày khuyết thiếu<br>
+              • Khôi phục trọn vẹn <span class="highlight">&gt;72.700</span> bản ghi
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">Cơ Sở Dữ Liệu SQLite (WAL)</div>
+            <div class="module-desc">
+              • Engine <span class="highlight">better-sqlite3</span> tốc độ &lt;2ms<br>
+              • Đánh chỉ mục <span class="code-pill">idx_timestamp</span><br>
+              • <span class="highlight">Smart Downsampling:</span> 120 điểm mẫu
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">Dịch Vụ Real-time SSE &amp; API</div>
+            <div class="module-desc">
+              • REST Endpoints: KPI, Chart, Table<br>
+              • Server-Sent Events (SSE) đẩy tức thời
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector 3 -> 4 -->
+      <div class="connector-box">
+        <div class="connector-pill">SSE / REST<br>&lt; 1 giây</div>
+        <div class="connector-line"></div>
+      </div>
+
+      <!-- TIER 4: Frontend UI -->
+      <div class="tier-col">
+        <div class="tier-header">
+          <span class="tier-tag tag-purple">Tầng 4: Trình Diễn (Web)</span>
+          <div class="tier-title">🖥️ React Dashboard</div>
+          <div class="tier-sub">Giao diện điều khiển &amp; Báo cáo</div>
+        </div>
+        <div class="module-stack">
+          <div class="module-box">
+            <div class="module-head">Bảng Điều Khiển Tổng Quan</div>
+            <div class="module-desc">
+              • 6 Thẻ KPI Pastel giám sát nhanh<br>
+              • Biểu đồ Nhiệt-Ẩm kép (2 trục Y)<br>
+              • Biểu đồ nồng độ khí MQ-2, 3, 4 (PPM)
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">Phân Hệ Dự Đoán Edge AI</div>
+            <div class="module-desc">
+              • Biểu đồ % Biến thiên &amp; Ngưỡng K-Means<br>
+              • Biểu đồ Thực tế vs Dự báo MOLR (t+6)<br>
+              • Thang đo 4 mức rủi ro (L0–L3)
+            </div>
+          </div>
+          <div class="module-box">
+            <div class="module-head">Cảnh Báo An Toàn &amp; Dữ Liệu</div>
+            <div class="module-desc">
+              • Báo động khẩn cấp (N=3 mức L2/L3)<br>
+              • Lọc thời gian: 24h, 7d, 12m, Tất cả<br>
+              • Tra cứu nhật ký &amp; Xuất file .CSV
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="panel-footer">
+      <div>Trạm quan trắc IoT môi trường y tế — Đề tài Sinh viên Nghiên cứu Khoa học</div>
+      <div>Công nghệ: React 18 • Node.js • SQLite • ESP32 Edge AI • Recharts</div>
+    </div>
+
+  </div>
+
+</body>
+</html>

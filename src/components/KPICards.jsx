@@ -10,7 +10,7 @@ import {
   TrendingDown
 } from 'lucide-react';
 
-export default function KPICards({ kpiData, thresholds }) {
+export default function KPICards({ kpiData }) {
   if (!kpiData) return null;
 
   const cards = [
@@ -21,12 +21,6 @@ export default function KPICards({ kpiData, thresholds }) {
       data: kpiData.temp,
       icon: Thermometer,
       iconBg: 'bg-amber-50 text-amber-600 border border-amber-100',
-      status: () => {
-        const val = kpiData.temp?.current ?? 0;
-        if (val >= thresholds.tempHigh) return { type: 'critical', text: 'Nhiệt độ cao' };
-        if (val >= thresholds.tempWarning) return { type: 'warning', text: 'Cảnh báo' };
-        return { type: 'normal', text: 'Bình thường' };
-      }
     },
     {
       id: 'humidity',
@@ -35,11 +29,6 @@ export default function KPICards({ kpiData, thresholds }) {
       data: kpiData.humidity,
       icon: Droplets,
       iconBg: 'bg-blue-50 text-blue-600 border border-blue-100',
-      status: () => {
-        const val = kpiData.humidity?.current ?? 0;
-        if (val >= thresholds.humidityHigh) return { type: 'warning', text: 'Độ ẩm cao' };
-        return { type: 'normal', text: 'Bình thường' };
-      }
     },
     {
       id: 'mq2',
@@ -48,12 +37,6 @@ export default function KPICards({ kpiData, thresholds }) {
       data: kpiData.mq2,
       icon: Flame,
       iconBg: 'bg-rose-50 text-rose-600 border border-rose-100',
-      status: () => {
-        const val = kpiData.mq2?.current ?? 0;
-        if (val >= thresholds.mq2Critical) return { type: 'critical', text: 'Nguy hiểm' };
-        if (val >= thresholds.mq2Warning) return { type: 'warning', text: 'Cảnh báo' };
-        return { type: 'normal', text: 'An toàn' };
-      }
     },
     {
       id: 'mq3',
@@ -62,12 +45,6 @@ export default function KPICards({ kpiData, thresholds }) {
       data: kpiData.mq3,
       icon: Wine,
       iconBg: 'bg-purple-50 text-purple-600 border border-purple-100',
-      status: () => {
-        const val = kpiData.mq3?.current ?? 0;
-        if (val >= thresholds.mq3Critical) return { type: 'critical', text: 'Nguy hiểm' };
-        if (val >= thresholds.mq3Warning) return { type: 'warning', text: 'Cảnh báo' };
-        return { type: 'normal', text: 'An toàn' };
-      }
     },
     {
       id: 'mq4',
@@ -76,12 +53,6 @@ export default function KPICards({ kpiData, thresholds }) {
       data: kpiData.mq4,
       icon: Wind,
       iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-      status: () => {
-        const val = kpiData.mq4?.current ?? 0;
-        if (val >= thresholds.mq4Critical) return { type: 'critical', text: 'Nguy hiểm' };
-        if (val >= thresholds.mq4Warning) return { type: 'warning', text: 'Cảnh báo' };
-        return { type: 'normal', text: 'An toàn' };
-      }
     },
     {
       id: 'gas_index',
@@ -90,13 +61,6 @@ export default function KPICards({ kpiData, thresholds }) {
       data: kpiData.gas_index || { current: 0, avg: 0, min: 0, max: 0, trend: 0 },
       icon: Activity,
       iconBg: 'bg-indigo-50 text-[#2563EB] border border-blue-100',
-      status: () => {
-        const lvl = kpiData.current_level || 'L0';
-        if (lvl === 'L3') return { type: 'critical', text: 'Cực nguy hại (L3)' };
-        if (lvl === 'L2') return { type: 'critical', text: 'Gây hại (L2)' };
-        if (lvl === 'L1') return { type: 'warning', text: 'Trung bình (L1)' };
-        return { type: 'normal', text: 'Bình thường (L0)' };
-      }
     },
   ];
 
@@ -106,28 +70,17 @@ export default function KPICards({ kpiData, thresholds }) {
         const Icon = card.icon;
         const trend = card.data?.trend ?? 0;
         const isUp = trend >= 0;
-        const statusInfo = card.status();
-
-        const badgeClass =
-          statusInfo.type === 'critical'
-            ? 'badge-critical'
-            : statusInfo.type === 'warning'
-            ? 'badge-warning'
-            : 'badge-normal';
 
         return (
           <div
             key={card.id}
             className="card p-4 transition-all duration-150 hover:shadow-md flex flex-col justify-between"
           >
-            {/* Top row: Icon + Status Badge */}
+            {/* Top row: Icon */}
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}>
                 <Icon className="w-5 h-5" />
               </div>
-              <span className={badgeClass}>
-                {statusInfo.text}
-              </span>
             </div>
 
             {/* Title */}
