@@ -523,8 +523,6 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         sheetUrl={sheetUrl}
         setSheetUrl={setSheetUrl}
-        thresholds={thresholds}
-        setThresholds={setThresholds}
         onReloadData={(newUrl) => {
           updateServerSettings(newUrl, thresholds).then(() => loadDashboardData(false));
         }}
